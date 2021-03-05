@@ -40,6 +40,6 @@ def _main(opts):
 
 if __name__ == "__main__":
     opts = {"width": 32}
-    if len(sys.argv > 1):
+    if len(sys.argv) > 1:
         opts["width"] = sys.argv[1]
-    _main()
+    _main(opts)
