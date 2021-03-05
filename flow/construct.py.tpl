@@ -17,7 +17,7 @@ def construct():
   adk_name = 'freepdk-45nm'
   adk_view = 'view-standard'
 
-  width = 32
+  width = {{ width }}
 
   parameters = {
     'construct_path' : __file__,
@@ -58,7 +58,7 @@ def construct():
   g.add_step( rtl            )
   g.add_step( constraints    )
   g.add_step( synth          )
-  
+
   #-----------------------------------------------------------------------
   # Graph -- Add edges
   #-----------------------------------------------------------------------
@@ -82,4 +82,3 @@ def construct():
 if __name__ == '__main__':
   g = construct()
 #  g.plot()
-
