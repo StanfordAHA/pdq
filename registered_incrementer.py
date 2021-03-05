@@ -1,5 +1,3 @@
-import os
-
 import magma as m
 
 
@@ -10,9 +8,3 @@ class RegisteredIncrementer(m.Generator2):
         self.io = m.IO(I0=m.In(T), I1=m.In(T), O=m.Out(T)) + m.ClockIO()
         sum_ = m.register(self.io.I0) + self.io.I1
         self.io.O @= sum_
-        
-
-if __name__ == "__main__":
-    width = int(os.environ["width"])
-    ckt = RegisteredIncrementer(width)
-    m.compile("design", ckt)
