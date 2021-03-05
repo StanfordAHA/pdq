@@ -13,6 +13,6 @@ class RegisteredIncrementer(m.Generator2):
         
 
 if __name__ == "__main__":
-    width = os.environ["width"]
+    width = int(os.environ["width"])
     ckt = RegisteredIncrementer(width)
     m.compile("design", ckt)
