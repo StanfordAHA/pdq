@@ -8,3 +8,6 @@ outputs:
 
 postconditions:
   - assert File("outputs/design.v")
+
+parameters:
+  width: 32

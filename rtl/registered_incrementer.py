@@ -1,3 +1,5 @@
+import os
+
 import magma as m
 
 
@@ -11,5 +13,6 @@ class RegisteredIncrementer(m.Generator2):
         
 
 if __name__ == "__main__":
-    ckt = RegisteredIncrementer(32)
+    width = os.environ["width"]
+    ckt = RegisteredIncrementer(width)
     m.compile("design", ckt)
