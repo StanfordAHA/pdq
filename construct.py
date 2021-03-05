@@ -17,13 +17,16 @@ def construct():
   adk_name = 'freepdk-45nm'
   adk_view = 'view-standard'
 
+  width = 32
+
   parameters = {
     'construct_path' : __file__,
-    'design_name'    : 'RegisteredIncrementer32',
+    'design_name'    : f"RegisteredIncrementer{width}",
     'clock_period'   : 2.0,
     'adk'            : adk_name,
     'adk_view'       : adk_view,
     'topographical'  : True,
+    'width'          : width
   }
 
   #-----------------------------------------------------------------------
