@@ -7,8 +7,8 @@ import tempfile
 import jinja2
 
 from registered_incrementer import *
-from report_parsing.parse_dc_area import parse_dc_area
-from report_parsing.parse_dc_area import parse_dc_timing
+from report_parsing.parsers import parse_dc_area
+from report_parsing.parsers import parse_dc_timing
 
 
 _FLOW_DIR = pathlib.Path("flow")
