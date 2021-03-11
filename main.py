@@ -8,6 +8,7 @@ import jinja2
 
 from registered_incrementer import *
 from report_parsing.parse_dc_area import parse_dc_area
+from report_parsing.parse_dc_area import parse_dc_timing
 
 
 _FLOW_DIR = pathlib.Path("flow")
@@ -41,6 +42,11 @@ def _get_area_report(build_dir, design_name):
     area_report_filename = report_dir / f"{design_name}.mapped.area.rpt"
     return parse_dc_area(area_report_filename)
 
+def _get_timing_report(build_dir, design_name):
+    report_dir = build_dir / "reports"
+    area_report_filename = report_dir / f"{design_name}.mapped.timing.setup.rpt"
+    return parse_dc_timing(area_report_filename)
+
 
 def _main(opts):
     ckt = RegisteredIncrementer(**opts)
@@ -57,6 +63,12 @@ def _main(opts):
     print ("=========== AREA REPORT =======================")
     for k, v in area_report.items():
         print (f"{k}: {v}")
+    print ("===============================================")
+    timing_report = _get_timing_report(syn_build_dir, ckt.name)
+    print ("=========== TIMING REPORT =======================")
+    for k1, d in timing_report.items():
+        for k2, v in d.items():
+            print (f"{k1} -> {k2}: {v}")
     print ("===============================================")
 
 
