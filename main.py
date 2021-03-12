@@ -1,7 +1,7 @@
+import argparse
 import pathlib
 import shutil
 import subprocess
-import sys
 import tempfile
 
 import jinja2
@@ -42,6 +42,7 @@ def _get_area_report(build_dir, design_name):
     area_report_filename = report_dir / f"{design_name}.mapped.area.rpt"
     return parse_dc_area(area_report_filename)
 
+
 def _get_timing_report(build_dir, design_name):
     report_dir = build_dir / "reports"
     area_report_filename = report_dir / f"{design_name}.mapped.timing.setup.rpt"
@@ -49,7 +50,7 @@ def _get_timing_report(build_dir, design_name):
 
 
 def _main(opts):
-    ckt = RegisteredIncrementer(**opts)
+    ckt = RegisteredIncrementer(opts["width"])
     with tempfile.TemporaryDirectory() as directory:
         src_basename = f"{directory}/design"
         m.compile(src_basename, ckt)
@@ -73,7 +74,10 @@ def _main(opts):
 
 
 if __name__ == "__main__":
-    opts = {"width": 32}
-    if len(sys.argv) > 1:
-        opts["width"] = sys.argv[1]
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--width", type=int, default=32)
+    parser.add_argument("--clock_period", type=float, default=2.0)
+    args = parser.parse_args()
+    opts = vars(args)
+    print (f"Running with opts {opts}")
     _main(opts)

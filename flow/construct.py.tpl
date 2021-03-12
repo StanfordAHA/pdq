@@ -22,7 +22,7 @@ def construct():
   parameters = {
     'construct_path' : __file__,
     'design_name'    : f"RegisteredIncrementer{width}",
-    'clock_period'   : 2.0,
+    'clock_period'   : {{ clock_period }},
     'adk'            : adk_name,
     'adk_view'       : adk_view,
     'topographical'  : True,
