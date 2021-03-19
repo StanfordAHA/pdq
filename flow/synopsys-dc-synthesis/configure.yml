@@ -22,6 +22,7 @@ outputs:
   - design.sdc
   - design.namemap
   - design.ddc
+  - design.mwlib
 
 #-------------------------------------------------------------------------
 # Commands
@@ -29,7 +30,6 @@ outputs:
 
 commands:
   - bash run.sh
-  - cd outputs; ln -sf ../results/*.mapped.ddc design.ddc; cd ..
 
 #-------------------------------------------------------------------------
 # Parameters
