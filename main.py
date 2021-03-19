@@ -86,7 +86,7 @@ def _main(opts):
         for k2, v in d.items():
             print (f"{k1} -> {k2}: {v}")
     print ("===============================================")
-    timing_query_report = _post_synth_timing_query(_BUILD_DIR, "I0", "*")
+    timing_query_report = _post_synth_timing_query(_BUILD_DIR, "I0[8]", "*")
     print ("=========== TIMING QUERY REPORT =======================")
     for k1, d in timing_query_report.items():
         for k2, v in d.items():
