@@ -16,8 +16,12 @@ _DST_FILENAME = _FLOW_DIR / "rtl/design.v"
 _BUILD_DIR = pathlib.Path("build")
 _CONSTRUCT_TPL_FILENAME = _FLOW_DIR / "construct.py.tpl"
 _CONSTRUCT_OUT_FILENAME = _FLOW_DIR / "construct.py"
+_QUERY_TPL_FILENAME = _FLOW_DIR / "query.tcl.tpl"
+_QUERY_OUT_FILENAME = _BUILD_DIR / "query.tcl"
 _SYN_RUN_STEP = "synopsys-dc-synthesis"
 _SYN_RUN_STEP_NUMBER = 4
+_SYN_QUERY_STEP = "synopsys-dc-query"
+_SYN_QUERY_STEP_NUMBER = 5
 
 
 def _generate_construct(tpl_filename, out_filename, opts):
@@ -49,6 +53,17 @@ def _get_timing_report(build_dir, design_name):
     return parse_dc_timing(area_report_filename)
 
 
+def _post_synth_timing_query(build_dir, from_pin, to_pin):
+    opts = { 'from': from_pin, 'to': to_pin }
+    _generate_construct(_QUERY_TPL_FILENAME, _QUERY_OUT_FILENAME, opts) 
+    cmd = ["make", _SYN_QUERY_STEP] 
+    cwd = str(build_dir.resolve())
+    subprocess.run(cmd, cwd=cwd)
+    query_report = f"{build_dir}/{_SYN_QUERY_STEP_NUMBER}-synopsys-dc-query/reports/timing_query.rpt"
+    return parse_dc_timing(query_report)
+    
+
+
 def _main(opts):
     ckt = RegisteredIncrementer(opts["width"])
     with tempfile.TemporaryDirectory() as directory:
@@ -68,6 +83,12 @@ def _main(opts):
     timing_report = _get_timing_report(syn_build_dir, ckt.name)
     print ("=========== TIMING REPORT =======================")
     for k1, d in timing_report.items():
+        for k2, v in d.items():
+            print (f"{k1} -> {k2}: {v}")
+    print ("===============================================")
+    timing_query_report = _post_synth_timing_query(_BUILD_DIR, "I0[8]", "*")
+    print ("=========== TIMING QUERY REPORT =======================")
+    for k1, d in timing_query_report.items():
         for k2, v in d.items():
             print (f"{k1} -> {k2}: {v}")
     print ("===============================================")

@@ -75,12 +75,6 @@ fi
 
 $dc_exec $opt_topographical -f START.tcl -output_log_file logs/dc.log || exit 1
 
-# Compress the spef file
-
-cd results
-gzip *.mapped.spef
-cd ..
-
 # Set up the outputs
 
 mkdir -p outputs && cd outputs
@@ -89,8 +83,6 @@ ln -sf ../results/*.mapped.v       design.v
 ln -sf ../results/*.mapped.sdc     design.sdc
 ln -sf ../results/*.mapped.spef.gz design.spef.gz
 ln -sf ../reports/*.namemap        design.namemap
-ln -sf ../results/*.mapped.ddc     design.ddc
-ln -sf ../*_lib                     design.mwlib
 
 cd ..
 

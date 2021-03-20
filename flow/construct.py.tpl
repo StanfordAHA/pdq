@@ -45,6 +45,7 @@ def construct():
   rtl         = Step( this_dir + '/rtl' )
   constraints = Step( this_dir + '/constraints' )
   synth       = Step( this_dir + '/synopsys-dc-synthesis')
+  synth_query = Step( this_dir + '/synopsys-dc-query')
 
   # Default steps
 
@@ -58,6 +59,7 @@ def construct():
   g.add_step( rtl            )
   g.add_step( constraints    )
   g.add_step( synth          )
+  g.add_step( synth_query    )
 
   #-----------------------------------------------------------------------
   # Graph -- Add edges
@@ -66,9 +68,12 @@ def construct():
   # Connect by name
 
   g.connect_by_name( adk,            synth             )
+  g.connect_by_name( adk,            synth_query       )
 
   g.connect_by_name( rtl,            synth             )
   g.connect_by_name( constraints,    synth             )
+  
+  g.connect_by_name( synth,          synth_query       )
 
   #-----------------------------------------------------------------------
   # Parameterize

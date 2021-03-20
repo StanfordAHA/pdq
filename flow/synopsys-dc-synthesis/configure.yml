@@ -21,6 +21,8 @@ outputs:
   - design.v
   - design.sdc
   - design.namemap
+  - design.ddc
+  - design.mwlib
 
 #-------------------------------------------------------------------------
 # Commands
