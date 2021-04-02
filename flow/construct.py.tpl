@@ -78,13 +78,15 @@ def construct():
   g.connect_by_name( adk,            synth             )
   g.connect_by_name( adk,            synth_query       )
   g.connect_by_name( adk,            ptpx_gl           )
+  g.connect_by_name( adk,            sim               )
 
   g.connect_by_name( rtl,            synth             )
   g.connect_by_name( constraints,    synth             )
   
   g.connect_by_name( synth,          synth_query       )
   g.connect_by_name( synth,          ptpx_gl           )
-  g.connect_by_name( synth,          sim               )
+  
+  g.connect( synth.o('design.v'), sim.i('design.vcs.v') )
 
   g.connect_by_name( testbench,      sim               )
   g.connect_by_name( vcd2saif,       sim               )
