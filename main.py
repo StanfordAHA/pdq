@@ -6,7 +6,8 @@ import tempfile
 
 import jinja2
 
-from registered_incrementer import *
+from designs.registered_incrementer import *
+from designs.simple_multiplier import *
 from report_parsing.parsers import parse_dc_area
 from report_parsing.parsers import parse_dc_timing
 
@@ -65,7 +66,9 @@ def _post_synth_timing_query(build_dir, from_pin, to_pin):
 
 
 def _main(opts):
-    ckt = RegisteredIncrementer(opts["width"])
+    designs = [RegisteredIncrementer, SimpleMultipler]
+    design = designs[opts["design"]]
+    ckt = design(opts["width"])
     with tempfile.TemporaryDirectory() as directory:
         src_basename = f"{directory}/design"
         m.compile(src_basename, ckt)
@@ -98,6 +101,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--width", type=int, default=32)
     parser.add_argument("--clock_period", type=float, default=2.0)
+    parser.add_argument("--design", type=int, default=0)
     args = parser.parse_args()
     opts = vars(args)
     print (f"Running with opts {opts}")
