@@ -17,16 +17,18 @@ def construct():
   adk_name = 'freepdk-45nm'
   adk_view = 'view-standard'
   design_name = '{{ design_name }}'
+  tb_name = f"{design_name}_tb"
 
   parameters = {
     'construct_path' : __file__,
     'design_name'    : design_name,
-    'testbench_name' : f"{design_name}_tb",
+    'testbench_name' : tb_name,
     'dut_name'       : design_name,
     'clock_period'   : {{ clock_period }},
     'adk'            : adk_name,
     'adk_view'       : adk_view,
     'topographical'  : True,
+    'strip_path'     : f"{tb_name}/dut"
   }
 
   #-----------------------------------------------------------------------
