@@ -22,9 +22,9 @@ _CONSTRUCT_OUT_FILENAME = _FLOW_DIR / "construct.py"
 _QUERY_TPL_FILENAME = _FLOW_DIR / "query.tcl.tpl"
 _QUERY_OUT_FILENAME = _BUILD_DIR / "query.tcl"
 _SYN_RUN_STEP = "synopsys-dc-synthesis"
-_SYN_RUN_STEP_NUMBER = 4
+_SYN_RUN_STEP_NUMBER = 5
 _SYN_QUERY_STEP = "synopsys-dc-query"
-_SYN_QUERY_STEP_NUMBER = 5
+_SYN_QUERY_STEP_NUMBER = 6
 
 
 def _render_template(tpl_filename, out_filename, opts):
