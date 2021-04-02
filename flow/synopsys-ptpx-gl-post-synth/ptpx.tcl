@@ -71,7 +71,7 @@ read_sdc -echo $ptpx_sdc
 check_constraints -verbose \
   > reports/$ptpx_design_name.checkconstraints.rpt
 
-read_parasitics -format spef $ptpx_spef
+#read_parasitics -format spef $ptpx_spef
 
 report_annotated_parasitics -check \
   > reports/$ptpx_design_name.parasitics.rpt

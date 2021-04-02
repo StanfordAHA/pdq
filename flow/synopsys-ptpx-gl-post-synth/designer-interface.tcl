@@ -27,8 +27,8 @@ set ptpx_extra_link_libraries     [join "
 # Inputs
 #-------------------------------------------------------------------------
 
-set ptpx_gl_netlist         inputs/design.vcs.v
-set ptpx_sdc                inputs/design.pt.sdc
+set ptpx_gl_netlist         inputs/design.v
+set ptpx_sdc                inputs/design.sdc
 set ptpx_saif               inputs/run.saif
 
 # The strip path must be defined!
