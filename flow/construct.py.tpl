@@ -44,12 +44,16 @@ def construct():
 
   rtl         = Step( this_dir + '/rtl' )
   constraints = Step( this_dir + '/constraints' )
-  synth       = Step( this_dir + '/synopsys-dc-synthesis')
-  synth_query = Step( this_dir + '/synopsys-dc-query')
+  synth       = Step( this_dir + '/synopsys-dc-synthesis' )
+  synth_query = Step( this_dir + '/synopsys-dc-query' )
+  testbench   = Step( this_dir + '/testbench' )
+  ptpx_gl     = Step( this_dir + '/synopsys-ptpx-gl-post-synth' )
 
   # Default steps
 
   info           = Step( 'info',                           default=True )
+  vcd2saif       = Step( 'synopsys-vcd2saif-convert',      default=True )
+  sim            = Step( 'synopsys-vcs-sim',               default=True )
 
   #-----------------------------------------------------------------------
   # Graph -- Add nodes
@@ -60,6 +64,10 @@ def construct():
   g.add_step( constraints    )
   g.add_step( synth          )
   g.add_step( synth_query    )
+  g.add_step( testbench      )
+  g.add_step( sim            )
+  g.add_step( vcd2saif       )
+  g.add_step( ptpx_gl        )
 
   #-----------------------------------------------------------------------
   # Graph -- Add edges
@@ -69,11 +77,21 @@ def construct():
 
   g.connect_by_name( adk,            synth             )
   g.connect_by_name( adk,            synth_query       )
+  g.connect_by_name( adk,            ptpx_gl           )
 
   g.connect_by_name( rtl,            synth             )
   g.connect_by_name( constraints,    synth             )
   
   g.connect_by_name( synth,          synth_query       )
+  g.connect_by_name( synth,          ptpx_gl           )
+  g.connect_by_name( synth,          sim               )
+
+  g.connect_by_name( testbench,      sim               )
+  g.connect_by_name( vcd2saif,       sim               )
+
+  g.connect_by_name( sim,            vcd2saif          )
+  g.connect_by_name( vcd2saif,       ptpx_gl           )
+
 
   #-----------------------------------------------------------------------
   # Parameterize
