@@ -25,6 +25,8 @@ _SYN_RUN_STEP = "synopsys-dc-synthesis"
 _SYN_RUN_STEP_NUMBER = 5
 _SYN_QUERY_STEP = "synopsys-dc-query"
 _SYN_QUERY_STEP_NUMBER = 6
+_POWER_STEP = "syonpsys-ptpx-gl"
+_POWER_STEP_NUMBER = 9
 
 
 def _render_template(tpl_filename, out_filename, opts):
@@ -34,14 +36,19 @@ def _render_template(tpl_filename, out_filename, opts):
         f.write(tpl.render(**opts))
 
 
+def _run_step(build_dir, step):
+    cwd = str(build_dir.resolve())
+    cmd = ["make", str(step)]
+    subprocess.run(cmd, cwd=cwd)
+
+
 def _mflowgen_run(design_dir, build_dir, run_step=None):
     cmd = ["mflowgen", "run", "--design", str(design_dir.resolve())]
     cwd = str(build_dir.resolve())
     subprocess.run(cmd, cwd=cwd)
     if run_step is None:
         return
-    cmd = ["make", str(run_step)]
-    subprocess.run(cmd, cwd=cwd)
+    _run_step(design_dir, build_dir, run_step)
 
 
 def _get_area_report(build_dir, design_name):
@@ -59,9 +66,7 @@ def _get_timing_report(build_dir, design_name):
 def _post_synth_timing_query(build_dir, from_pin, to_pin):
     opts = {"from": from_pin, "to": to_pin}
     _render_template(_QUERY_TPL_FILENAME, _QUERY_OUT_FILENAME, opts)
-    cmd = ["make", _SYN_QUERY_STEP]
-    cwd = str(build_dir.resolve())
-    subprocess.run(cmd, cwd=cwd)
+    _run_step(build_dir, _SYN_QUERY_STEP)
     query_report = (f"{build_dir}/{_SYN_QUERY_STEP_NUMBER}-synopsys-dc-query/"
                     f"reports/timing_query.rpt")
     return parse_dc_timing(query_report)
@@ -104,6 +109,7 @@ def _main(opts):
         for k2, v in d.items():
             print (f"{k1} -> {k2}: {v}")
     print ("===============================================")
+    _run_step(_BUILD_DIR, _POWER_STEP)
 
 
 if __name__ == "__main__":
