@@ -24,10 +24,13 @@ def generate_uniform_random_stimulus(ckt, num_cycles=1, **kwargs):
     return tester
 
 
-def generate_testbench(ckt):
+def generate_testbench(ckt, directory):
     tester = generate_uniform_random_stimulus(ckt)
     tester.compile_and_run(
         "system-verilog",
+        directory=directory,
         simulator="vcs",
         dump_waveforms=True,
-        waveform_type="vcd")
+        waveform_type="vcd",
+        skip_run=True,
+        skip_compile=True)

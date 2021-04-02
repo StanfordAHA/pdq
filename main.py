@@ -8,12 +8,14 @@ import jinja2
 
 from designs.registered_incrementer import *
 from designs.simple_multiplier import *
+from generate_testbench import generate_testbench
 from report_parsing.parsers import parse_dc_area
 from report_parsing.parsers import parse_dc_timing
 
 
 _FLOW_DIR = pathlib.Path("flow")
-_DST_FILENAME = _FLOW_DIR / "rtl/design.v"
+_DESIGN_FILENAME = _FLOW_DIR / "rtl/design.v"
+_TESTBENCH_FILENAME = _FLOW_DIR / "testbench/testbench.sv"
 _BUILD_DIR = pathlib.Path("build")
 _CONSTRUCT_TPL_FILENAME = _FLOW_DIR / "construct.py.tpl"
 _CONSTRUCT_OUT_FILENAME = _FLOW_DIR / "construct.py"
@@ -64,7 +66,6 @@ def _post_synth_timing_query(build_dir, from_pin, to_pin):
     return parse_dc_timing(query_report)
     
 
-
 def _main(opts):
     designs = [RegisteredIncrementer, SimpleMultipler]
     design = designs[opts["design"]]
@@ -72,7 +73,9 @@ def _main(opts):
     with tempfile.TemporaryDirectory() as directory:
         src_basename = f"{directory}/design"
         m.compile(src_basename, ckt)
-        shutil.copyfile(f"{src_basename}.v", _DST_FILENAME)
+        shutil.copyfile(f"{src_basename}.v", _DESIGN_FILENAME)
+        generate_testbench(ckt, directory)
+        shutil.copyfile(f"{directory}/{ckt.name}_tb.sv", _TESTBENCH_FILENAME)
     _generate_construct(_CONSTRUCT_TPL_FILENAME, _CONSTRUCT_OUT_FILENAME, opts)
     _mflowgen_run(
         design_dir=_FLOW_DIR, build_dir=_BUILD_DIR, run_step=_SYN_RUN_STEP)
