@@ -25,7 +25,7 @@ _SYN_RUN_STEP = "synopsys-dc-synthesis"
 _SYN_RUN_STEP_NUMBER = 5
 _SYN_QUERY_STEP = "synopsys-dc-query"
 _SYN_QUERY_STEP_NUMBER = 6
-_POWER_STEP = "syonpsys-ptpx-gl"
+_POWER_STEP = "synopsys-ptpx-gl"
 _POWER_STEP_NUMBER = 9
 
 
@@ -48,7 +48,7 @@ def _mflowgen_run(design_dir, build_dir, run_step=None):
     subprocess.run(cmd, cwd=cwd)
     if run_step is None:
         return
-    _run_step(design_dir, build_dir, run_step)
+    _run_step(build_dir, run_step)
 
 
 def _get_area_report(build_dir, design_name):
