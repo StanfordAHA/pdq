@@ -24,6 +24,10 @@ def generate_uniform_random_stimulus(ckt, num_cycles=1, **kwargs):
     return tester
 
 
-def generate_vcd(ckt):
+def generate_testbench(ckt):
     tester = generate_uniform_random_stimulus(ckt)
-    tester.compile_and_run("verilator", flags=["--trace"])
+    tester.compile_and_run(
+        "system-verilog",
+        simulator="vcs",
+        dump_waveforms=True,
+        waveform_type="vcd")
