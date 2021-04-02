@@ -27,7 +27,7 @@ _SYN_QUERY_STEP = "synopsys-dc-query"
 _SYN_QUERY_STEP_NUMBER = 5
 
 
-def _generate_construct(tpl_filename, out_filename, opts):
+def _render_template(tpl_filename, out_filename, opts):
     with open(tpl_filename, "r") as f:
         tpl = jinja2.Template(f.read())
     with open(out_filename, "w") as f:
@@ -57,14 +57,15 @@ def _get_timing_report(build_dir, design_name):
 
 
 def _post_synth_timing_query(build_dir, from_pin, to_pin):
-    opts = { 'from': from_pin, 'to': to_pin }
-    _generate_construct(_QUERY_TPL_FILENAME, _QUERY_OUT_FILENAME, opts) 
-    cmd = ["make", _SYN_QUERY_STEP] 
+    opts = {"from": from_pin, "to": to_pin}
+    _render_template(_QUERY_TPL_FILENAME, _QUERY_OUT_FILENAME, opts)
+    cmd = ["make", _SYN_QUERY_STEP]
     cwd = str(build_dir.resolve())
     subprocess.run(cmd, cwd=cwd)
-    query_report = f"{build_dir}/{_SYN_QUERY_STEP_NUMBER}-synopsys-dc-query/reports/timing_query.rpt"
+    query_report = (f"{build_dir}/{_SYN_QUERY_STEP_NUMBER}-synopsys-dc-query/"
+                    f"reports/timing_query.rpt")
     return parse_dc_timing(query_report)
-    
+
 
 def _main(opts):
     designs = [RegisteredIncrementer, SimpleMultipler]
@@ -76,7 +77,12 @@ def _main(opts):
         shutil.copyfile(f"{src_basename}.v", _DESIGN_FILENAME)
         generate_testbench(ckt, directory)
         shutil.copyfile(f"{directory}/{ckt.name}_tb.sv", _TESTBENCH_FILENAME)
-    _generate_construct(_CONSTRUCT_TPL_FILENAME, _CONSTRUCT_OUT_FILENAME, opts)
+    construct_opts = {
+        "design_name": ckt.name,
+        "clock_period": opts["clock_period"]
+    }
+    _render_template(
+        _CONSTRUCT_TPL_FILENAME, _CONSTRUCT_OUT_FILENAME, construct_opts)
     _mflowgen_run(
         design_dir=_FLOW_DIR, build_dir=_BUILD_DIR, run_step=_SYN_RUN_STEP)
     syn_step_dir = f"{_SYN_RUN_STEP_NUMBER}-{_SYN_RUN_STEP}"
