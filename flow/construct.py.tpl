@@ -49,13 +49,13 @@ def construct():
   synth       = Step( this_dir + '/synopsys-dc-synthesis' )
   synth_query = Step( this_dir + '/synopsys-dc-query' )
   testbench   = Step( this_dir + '/testbench' )
-  ptpx_gl     = Step( this_dir + '/synopsys-ptpx-gl-post-synth' )
 
   # Default steps
 
-  info           = Step( 'info',                           default=True )
-  vcd2saif       = Step( 'synopsys-vcd2saif-convert',      default=True )
-  sim            = Step( 'synopsys-vcs-sim',               default=True )
+  info        = Step( 'info',                           default=True )
+  vcd2saif    = Step( 'synopsys-vcd2saif-convert',      default=True )
+  sim         = Step( 'synopsys-vcs-sim',               default=True )
+  ptpx_gl     = Step( 'synopsys-ptpx-gl',    default=True )
 
   #-----------------------------------------------------------------------
   # Graph -- Add nodes
@@ -87,6 +87,10 @@ def construct():
 
   g.connect_by_name( synth,          synth_query       )
   g.connect_by_name( synth,          ptpx_gl           )
+
+
+  g.connect( synth.o('design.v'), ptpx_gl.i('design.vcs.v') )
+  g.connect( synth.o('design.sdc'), ptpx_gl.i('design.pt.sdc') )
 
   g.connect( synth.o('design.v'), sim.i('design.vcs.v') )
 

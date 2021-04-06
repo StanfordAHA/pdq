@@ -23,6 +23,7 @@ outputs:
   - design.namemap
   - design.ddc
   - design.mwlib
+  - design.spef.gz
 
 #-------------------------------------------------------------------------
 # Commands
