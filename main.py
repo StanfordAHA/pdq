@@ -131,7 +131,7 @@ def _make_params(gen, args):
 
 
 def _get_ckt(args):
-    py_module = importlib.import_module(args.file)
+    py_module = importlib.import_module(args.package)
     if args.module is not None:
         return getattr(py_module, args.module)
     if args.generator is not None:
@@ -144,7 +144,7 @@ def _get_ckt(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("file", type=str)
+    parser.add_argument("package", type=str)
     ckt_group = parser.add_mutually_exclusive_group(required=True)
     ckt_group.add_argument("--module", type=str)
     ckt_group.add_argument("--generator", type=str)
