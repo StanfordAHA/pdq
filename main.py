@@ -1,4 +1,6 @@
 import argparse
+import importlib
+import inspect
 import pathlib
 import shutil
 import subprocess
@@ -72,10 +74,7 @@ def _post_synth_timing_query(build_dir, from_pin, to_pin):
     return parse_dc_timing(query_report)
 
 
-def _main(opts):
-    designs = [RegisteredIncrementer, SimpleMultipler]
-    design = designs[opts["design"]]
-    ckt = design(opts["width"])
+def _main(ckt, opts):
     with tempfile.TemporaryDirectory() as directory:
         src_basename = f"{directory}/design"
         m.compile(src_basename, ckt)
@@ -103,6 +102,7 @@ def _main(opts):
         for k2, v in d.items():
             print (f"{k1} -> {k2}: {v}")
     print ("===============================================")
+    # TODO(rsetaluri,alexcarsello): Make this non-design specific.
     timing_query_report = _post_synth_timing_query(_BUILD_DIR, "I0[8]", "*")
     print ("=========== TIMING QUERY REPORT =======================")
     for k1, d in timing_query_report.items():
@@ -112,12 +112,48 @@ def _main(opts):
     _run_step(_BUILD_DIR, _POWER_STEP)
 
 
+def _make_params(gen, args):
+    if args.params is None:
+        return {}
+    gen_sig = inspect.signature(gen.__init__)
+    parser = argparse.ArgumentParser(add_help=False, prog=gen.__name__)
+    for gen_sig_param in gen_sig.parameters.values():
+        if gen_sig_param.name == "self":
+            continue
+        kwargs = {}
+        if gen_sig_param.annotation is not inspect.Parameter.empty:
+            kwargs["type"] = gen_sig_param.annotation
+        if gen_sig_param.default is not inspect.Parameter.empty:
+            kwargs["default"] = gen_sig_param.default
+        parser.add_argument(f"-{gen_sig_param.name}", **kwargs)
+    params = ["-" + p for p in args.params.split(",")]
+    return vars(parser.parse_args(params))
+
+
+def _get_ckt(args):
+    py_module = importlib.import_module(args.file)
+    if args.module is not None:
+        return getattr(py_module, args.module)
+    if args.generator is not None:
+        gen = getattr(py_module, args.generator)
+        params = _make_params(gen, args)
+        print ("Generator params", params)
+        return gen(**params)
+    raise NotImplementedError()
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--width", type=int, default=32)
-    parser.add_argument("--clock_period", type=float, default=2.0)
-    parser.add_argument("--design", type=int, default=0)
+    parser.add_argument("file", type=str)
+    ckt_group = parser.add_mutually_exclusive_group(required=True)
+    ckt_group.add_argument("--module", type=str)
+    ckt_group.add_argument("--generator", type=str)
+    parser.add_argument("--params", type=str)
+    opts_group = parser.add_argument_group("opts")
+    opts_group.add_argument("--clock_period", type=float, default=2.0)
     args = parser.parse_args()
-    opts = vars(args)
+    ckt = _get_ckt(args)
+    opts_keys = list(action.dest for action in opts_group._group_actions)
+    opts = {k: getattr(args, k) for k in opts_keys}
     print (f"Running with opts {opts}")
-    _main(opts)
+    _main(ckt, opts)
