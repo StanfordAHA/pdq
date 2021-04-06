@@ -10,3 +10,6 @@ We recommend using a python virtual environment. The required python packages ar
     source env/bin/activate
     python -m pip install -r requirements.txt
   
+The `magma_examples` repo can be fetched locally for use in experimentation:
+
+    git submodule update --init --recursive
