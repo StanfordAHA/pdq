@@ -13,6 +13,7 @@ from designs.simple_multiplier import *
 from generate_testbench import generate_testbench
 from report_parsing.parsers import parse_dc_area
 from report_parsing.parsers import parse_dc_timing
+from report_parsing.parsers import parse_ptpx_power
 
 
 _FLOW_DIR = pathlib.Path("flow")
@@ -64,6 +65,11 @@ def _get_timing_report(build_dir, design_name):
     area_report_filename = report_dir / f"{design_name}.mapped.timing.setup.rpt"
     return parse_dc_timing(area_report_filename)
 
+def _get_power_report(build_dir, design_name):
+    report_dir = build_dir / "reports"
+    power_report_filename = report_dir / f"{design_name}.power.hier.rpt"
+    return parse_ptpx_power(power_report_filename)
+
 
 def _post_synth_timing_query(build_dir, from_pin, to_pin):
     opts = {"from": from_pin, "to": to_pin}
@@ -102,6 +108,16 @@ def _main(ckt, opts):
         for k2, v in d.items():
             print (f"{k1} -> {k2}: {v}")
     print ("===============================================")
+    _run_step(_BUILD_DIR, _POWER_STEP)
+    power_step_dir = f"{_POWER_STEP_NUMBER}-{_POWER_STEP}"
+    power_build_dir = _BUILD_DIR / power_step_dir
+    power_report = _get_power_report(power_build_dir, ckt.name)
+    print ("=========== POWER REPORT =======================")
+    for k1, d in power_report.items():
+        print(f"{k1}:")
+        for k2, v in d.items():
+            print (f"  {k2}: {v}")
+    print ("===============================================")
     # TODO(rsetaluri,alexcarsello): Make this non-design specific.
     timing_query_report = _post_synth_timing_query(_BUILD_DIR, "I0[8]", "*")
     print ("=========== TIMING QUERY REPORT =======================")
@@ -109,7 +125,6 @@ def _main(ckt, opts):
         for k2, v in d.items():
             print (f"{k1} -> {k2}: {v}")
     print ("===============================================")
-    _run_step(_BUILD_DIR, _POWER_STEP)
 
 
 def _make_params(gen, args):
