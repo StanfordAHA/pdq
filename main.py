@@ -108,6 +108,13 @@ def _main(ckt, opts):
         for k2, v in d.items():
             print (f"{k1} -> {k2}: {v}")
     print ("===============================================")
+    # TODO(rsetaluri,alexcarsello): Make this non-design specific.
+    timing_query_report = _post_synth_timing_query(_BUILD_DIR, "I0[8]", "*")
+    print ("=========== TIMING QUERY REPORT =======================")
+    for k1, d in timing_query_report.items():
+        for k2, v in d.items():
+            print (f"{k1} -> {k2}: {v}")
+    print ("===============================================")
     _run_step(_BUILD_DIR, _POWER_STEP)
     power_step_dir = f"{_POWER_STEP_NUMBER}-{_POWER_STEP}"
     power_build_dir = _BUILD_DIR / power_step_dir
@@ -117,13 +124,6 @@ def _main(ckt, opts):
         print(f"{k1}:")
         for k2, v in d.items():
             print (f"  {k2}: {v}")
-    print ("===============================================")
-    # TODO(rsetaluri,alexcarsello): Make this non-design specific.
-    timing_query_report = _post_synth_timing_query(_BUILD_DIR, "I0[8]", "*")
-    print ("=========== TIMING QUERY REPORT =======================")
-    for k1, d in timing_query_report.items():
-        for k2, v in d.items():
-            print (f"{k1} -> {k2}: {v}")
     print ("===============================================")
 
 
