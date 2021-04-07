@@ -49,3 +49,38 @@ def parse_dc_timing(report_name):
         keywords[tag[0]] = [line.split()[tag[1]] for line in lines]
     slack_tuples = list(zip(*[keywords[tag[0]] for tag in tags]))
     return {k1 : {k2: v} for k1, k2, v in slack_tuples}
+
+def _create_power_dict(internal, switch, leak):
+    return {'int': internal, 'switch': switch, 'leak': leak}
+
+# Function to create Python dict from ptpx power report
+# Key1 = hierarchical instance name
+# Key2 = power number type (int, switch, or leak)
+
+def parse_ptpx_power(report_name):
+    # First, looked for long dashed line
+    tag = '-----'
+    power_dict = {}
+    report = open(report_name)
+    lines = report.readlines()
+    for ind, line in enumerate(lines):
+        if tag in line:
+            line_num = ind + 1
+            break
+    # Get top level energy numbers
+    top_line = lines[line_num]
+    (name, internal, switch, leak, _, _) = top_line.strip().split()
+    power_dict[name] = _create_power_dict(internal, switch, leak)
+    # Get all leaf inst power numbers
+    hierarchy = []
+    for line in lines[line_num + 1:]:
+        lspaces = len(line) - len(line.lstrip())
+        depth = (lspaces - 2) / 2
+        (name, _, internal, switch, leak, _, _) = line.strip.split()
+        hierarchy.insert(depth, name)
+        # ensure we don't include anything past the current depth
+        hierarchy = hierarchy[0:depth + 1]
+        hier_name = '/'.join(hierarchy)
+        power_dict[hier_name] = _create_power_dict(internal, switch, leak)
+   
+    return power_dict 
