@@ -63,6 +63,8 @@ def parse_ptpx_power(report_name):
     power_dict = {}
     report = open(report_name)
     lines = report.readlines()
+    # Remove last line
+    lines = lines[:-1]
     for ind, line in enumerate(lines):
         if tag in line:
             line_num = ind + 1
@@ -75,12 +77,11 @@ def parse_ptpx_power(report_name):
     hierarchy = []
     for line in lines[line_num + 1:]:
         lspaces = len(line) - len(line.lstrip())
-        depth = (lspaces - 2) / 2
-        (name, _, internal, switch, leak, _, _) = line.strip.split()
+        depth = (lspaces - 2) // 2
+        (name, _, internal, switch, leak, _, _) = line.strip().split()
         hierarchy.insert(depth, name)
         # ensure we don't include anything past the current depth
         hierarchy = hierarchy[0:depth + 1]
         hier_name = '/'.join(hierarchy)
         power_dict[hier_name] = _create_power_dict(internal, switch, leak)
-   
     return power_dict 
