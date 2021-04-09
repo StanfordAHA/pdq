@@ -83,7 +83,7 @@ def _post_synth_timing_query(build_dir, from_pin, to_pin):
 def _main(ckt, opts):
     with tempfile.TemporaryDirectory() as directory:
         src_basename = f"{directory}/design"
-        m.compile(src_basename, ckt)
+        m.compile(src_basename, ckt, coreir_libs={"float_DW"})
         shutil.copyfile(f"{src_basename}.v", _DESIGN_FILENAME)
         generate_testbench(ckt, directory)
         shutil.copyfile(f"{directory}/{ckt.name}_tb.sv", _TESTBENCH_FILENAME)
