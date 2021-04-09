@@ -9,6 +9,8 @@ def _make_random(T):
         return fault.random_bv(T.N)
     if issubclass(T, m.Array):
         return [_make_random(T.T) for _ in range(T.N)]
+    if issubclass(T, m.Tuple):
+        return {k: _make_random(T) for k, T in T.field_dict.items()}
     raise NotImplementedError()
 
 
