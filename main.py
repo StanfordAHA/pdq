@@ -14,7 +14,7 @@ from generate_testbench import generate_testbench
 from report_parsing.parsers import parse_dc_area
 from report_parsing.parsers import parse_dc_timing
 from report_parsing.parsers import parse_ptpx_power
-
+from magma.clock import get_default_clocks
 
 _FLOW_DIR = pathlib.Path("flow")
 _DESIGN_FILENAME = _FLOW_DIR / "rtl/design.v"
@@ -80,6 +80,14 @@ def _post_synth_timing_query(build_dir, from_pin, to_pin):
     return parse_dc_timing(query_report)
 
 
+# Helper function to return name of top level clock
+def _get_clk_name(ckt):
+    try:
+        return f"\'{get_default_clocks(ckt)[m.Clock].name.name}\'"
+    except:
+        return None
+
+
 def _main(ckt, opts):
     with tempfile.TemporaryDirectory() as directory:
         src_basename = f"{directory}/design"
@@ -87,9 +95,11 @@ def _main(ckt, opts):
         shutil.copyfile(f"{src_basename}.v", _DESIGN_FILENAME)
         generate_testbench(ckt, directory)
         shutil.copyfile(f"{directory}/{ckt.name}_tb.sv", _TESTBENCH_FILENAME)
+    clk_name = _get_clk_name(ckt)
     construct_opts = {
         "design_name": ckt.name,
-        "clock_period": opts["clock_period"]
+        "clock_period": opts["clock_period"],
+        "clock_net": clk_name
     }
     _render_template(
         _CONSTRUCT_TPL_FILENAME, _CONSTRUCT_OUT_FILENAME, construct_opts)
