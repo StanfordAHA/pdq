@@ -18,10 +18,14 @@ def construct():
   adk_view = 'view-standard'
   design_name = '{{ design_name }}'
   tb_name = f"{design_name}_tb"
+  clock_net = {{ clock_net }}
+  is_comb = clock_net is None
 
   parameters = {
     'construct_path' : __file__,
     'design_name'    : design_name,
+    'clock_net'      : clock_net,
+    'is_comb'        : is_comb,
     'testbench_name' : tb_name,
     'dut_name'       : design_name,
     'clock_period'   : {{ clock_period }},
@@ -106,6 +110,11 @@ def construct():
   #-----------------------------------------------------------------------
 
   g.update_params( parameters )
+
+  synth.update_params( {
+    'clock_net': parameters['clock_net'],
+    'is_comb'  : parameters['is_comb']
+    }, allow_new=True )
 
   return g
 
