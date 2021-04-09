@@ -1,3 +1,6 @@
 [submodule "magma_examples"]
 	path = magma_examples
 	url = https://github.com/leonardt/magma_examples.git
+[submodule "garnet"]
+	path = garnet
+	url = https://github.com/StanfordAHA/garnet.git
