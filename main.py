@@ -7,6 +7,7 @@ import tempfile
 
 import magma as m
 
+from common.reporting import make_header
 from generate_testbench import generate_testbench
 from report_parsing.parsers import parse_dc_area
 from report_parsing.parsers import parse_dc_timing
@@ -62,41 +63,39 @@ def _main(ckt, opts):
 
     area_report = parse_dc_area(
         syn_step.get_report(f"{ckt.name}.mapped.area.rpt"))
-    print ("=========== AREA REPORT =======================")
+    print (make_header("AREA REPORT"))
     for k, v in area_report.items():
         print (f"{k}: {v}")
-    print ("===============================================")
+    print (make_header("", pad=False))
 
     timing_report = parse_dc_timing(
         syn_step.get_report(f"{ckt.name}.mapped.timing.setup.rpt"))
-    print ("=========== TIMING REPORT =======================")
+    print (make_header("TIMING REPORT"))
     for k1, d in timing_report.items():
         for k2, v in d.items():
             print (f"{k1} -> {k2}: {v}")
-    print ("===============================================")
+    print (make_header("", pad=False))
 
     timing_query_step = flow.get_step("synopsys-dc-query")
     timing_query_step.run()
     timing_query_report = parse_dc_timing(
         timing_query_step.get_report("timing_query.rpt"))
-    print ("=========== TIMING QUERY REPORT =======================")
+    print (make_header("TIMING QUERY REPORT"))
     for k1, d in timing_query_report.items():
         for k2, v in d.items():
             print (f"{k1} -> {k2}: {v}")
-    print ("===============================================")
+    print (make_header("", pad=False))
 
     power_step = flow.get_step("synopsys-ptpx-gl")
     power_step.run()
     power_report = parse_ptpx_power(
         power_step.get_report(f"{ckt.name}.power.hier.rpt"))
-
-
-    print ("=========== POWER REPORT =======================")
+    print (make_header("POWER REPORT"))
     for k1, d in power_report.items():
         print(f"{k1}:")
         for k2, v in d.items():
             print (f"  {k2}: {v}")
-    print ("===============================================")
+    print (make_header("", pad=False))
 
 
 def _make_params(gen, args):
