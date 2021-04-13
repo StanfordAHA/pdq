@@ -11,13 +11,27 @@
 # is too large the tools will have no trouble but you will get a very
 # conservative implementation.
 
-set clock_net  CLK
+set clock_net  $::env(clock_net)
 set clock_name ideal_clock
 
-create_clock -name ${clock_name} \
-             -period ${dc_clock_period} \
-             [get_ports ${clock_net}]
-
+if {$::env(is_comb) == True} {
+  # If there's no clock in the design, constrain max delay from any input
+  set_max_delay -from [all_inputs] ${dc_clock_period}
+} else {
+  create_clock -name ${clock_name} \
+               -period ${dc_clock_period} \
+               [get_ports ${clock_net}]
+  
+  # set_input_delay constraints for input ports
+  #
+  # - make this non-zero to avoid hold buffers on input-registered designs
+  
+  set_input_delay -clock ${clock_name} [expr ${dc_clock_period}/2.0] [all_inputs]
+  
+  # set_output_delay constraints for output ports
+  
+  set_output_delay -clock ${clock_name} 0 [all_outputs]
+}
 # This constraint sets the load capacitance in picofarads of the
 # output pins of your design.
 
@@ -32,15 +46,6 @@ set_load -pin_load $ADK_TYPICAL_ON_CHIP_LOAD [all_outputs]
 set_driving_cell -no_design_rule \
   -lib_cell $ADK_DRIVING_CELL [all_inputs]
 
-# set_input_delay constraints for input ports
-#
-# - make this non-zero to avoid hold buffers on input-registered designs
-
-set_input_delay -clock ${clock_name} [expr ${dc_clock_period}/2.0] [all_inputs]
-
-# set_output_delay constraints for output ports
-
-set_output_delay -clock ${clock_name} 0 [all_outputs]
 
 # Make all signals limit their fanout
 
