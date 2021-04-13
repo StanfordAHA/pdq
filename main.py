@@ -3,11 +3,8 @@ import importlib
 import inspect
 import logging
 import pathlib
-import shutil
-import subprocess
 import tempfile
 
-import jinja2
 import magma as m
 
 from generate_testbench import generate_testbench
@@ -18,16 +15,7 @@ from flow_tools.templated_flow_builder import *
 
 
 _FLOW_DIR = pathlib.Path("flow")
-_DESIGN_FILENAME = _FLOW_DIR / "rtl/design.v"
-_TESTBENCH_FILENAME = _FLOW_DIR / "testbench/testbench.sv"
 _BUILD_DIR = pathlib.Path("build")
-_CONSTRUCT_TPL_FILENAME = _FLOW_DIR / "construct.py.tpl"
-_CONSTRUCT_OUT_FILENAME = _FLOW_DIR / "construct.py"
-_QUERY_TPL_FILENAME = _FLOW_DIR / "query.tcl.tpl"
-_QUERY_OUT_FILENAME = _BUILD_DIR / "query.tcl"
-_SYN_RUN_STEP = "synopsys-dc-synthesis"
-_SYN_QUERY_STEP = "synopsys-dc-query"
-_POWER_STEP = "synopsys-ptpx-gl"
 
 
 def _get_area_report(build_dir, design_name):
@@ -61,71 +49,72 @@ def _get_clk_name(ckt):
     return f"'{clk.name.name}'"
 
 
-def _main(ckt, opts):
+def _make_flow(ckt, opts):
     construct_opts = {
         "design_name": ckt.name,
         "clock_period": opts["clock_period"],
         "clock_net": _get_clk_name(ckt),
     }
-    flow_builder = TemplatedFlowBuilder()
-    flow_builder.set_flow_dir("flow")
-    flow_builder.add_template(
+    builder = TemplatedFlowBuilder()
+    builder.set_flow_dir(_FLOW_DIR)
+    builder.add_template(
         FileTemplate(
-            _CONSTRUCT_TPL_FILENAME,
-            _CONSTRUCT_OUT_FILENAME,
-            construct_opts,))
-    # TODO(rsetaluri,alexcarsello): Make non-design specific.
-    flow_builder.add_template(
+            builder.get_relative("construct.py.tpl"),
+            builder.get_relative("construct.py"),
+            construct_opts))
+    # TODO(rsetaluri,alexcarsello): Make pins non-design specific.
+    builder.add_template(
         FileTemplate(
-            _QUERY_TPL_FILENAME,
-            _QUERY_OUT_FILENAME,
+            builder.get_relative("query.tcl.tpl"),
+            _BUILD_DIR / "query.tcl",
             dict(from_pin="I0[8]", to_pin="*")))
     with tempfile.TemporaryDirectory() as directory:
         design_basename = f"{directory}/design"
         m.compile(design_basename, ckt, coreir_libs={"float_DW"})
-        flow_builder.add_template(
+        builder.add_template(
             FileCopy(
                 f"{design_basename}.v",
-                _DESIGN_FILENAME))
+                builder.get_relative("rtl/design.v")))
         generate_testbench(ckt, directory)
-        flow_builder.add_template(
+        builder.add_template(
             FileCopy(
                 f"{directory}/{ckt.name}_tb.sv",
-                _TESTBENCH_FILENAME))
-        flow = flow_builder.build()
-    flow.build(_BUILD_DIR)
-    syn_step = flow.get_step(_SYN_RUN_STEP)
-    syn_step.run()
-    syn_build_dir = syn_step.get_build_dir()
+                builder.get_relative("testbench/testbench.sv")))
+        return builder.build()
 
-    area_report = _get_area_report(syn_build_dir, ckt.name)
+
+def _main(ckt, opts):
+    flow = _make_flow(ckt, opts)
+    flow.build(_BUILD_DIR)
+    syn_step = flow.get_step("synopsys-dc-synthesis")
+    syn_step.run()
+
+    area_report = _get_area_report(syn_step.get_build_dir(), ckt.name)
     print ("=========== AREA REPORT =======================")
     for k, v in area_report.items():
         print (f"{k}: {v}")
     print ("===============================================")
 
-    timing_report = _get_timing_report(syn_build_dir, ckt.name)
+    timing_report = _get_timing_report(syn_step.get_build_dir(), ckt.name)
     print ("=========== TIMING REPORT =======================")
     for k1, d in timing_report.items():
         for k2, v in d.items():
             print (f"{k1} -> {k2}: {v}")
     print ("===============================================")
 
-    timing_query_step = flow.get_step(_SYN_QUERY_STEP)
+    timing_query_step = flow.get_step("synopsys-dc-query")
     timing_query_step.run()
-    timing_query_build_dir = timing_query_step.get_build_dir()
     timing_query_report = _post_synth_timing_query(
-        timing_query_build_dir, "I0[8]", "*")
+        timing_query_step.get_build_dir(), "I0[8]", "*")
     print ("=========== TIMING QUERY REPORT =======================")
     for k1, d in timing_query_report.items():
         for k2, v in d.items():
             print (f"{k1} -> {k2}: {v}")
     print ("===============================================")
 
-    power_step = flow.get_step(_POWER_STEP)
+    power_step = flow.get_step("synopsys-ptpx-gl")
     power_step.run()
-    power_build_dir = power_step.get_build_dir()
-    power_report = _get_power_report(power_build_dir, ckt.name)
+    power_report = _get_power_report(power_step.get_build_dir(), ckt.name)
     print ("=========== POWER REPORT =======================")
     for k1, d in power_report.items():
         print(f"{k1}:")
