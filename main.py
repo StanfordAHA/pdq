@@ -1,6 +1,7 @@
 import argparse
 import importlib
 import inspect
+import logging
 import pathlib
 import shutil
 import subprocess
@@ -13,6 +14,7 @@ from generate_testbench import generate_testbench
 from report_parsing.parsers import parse_dc_area
 from report_parsing.parsers import parse_dc_timing
 from report_parsing.parsers import parse_ptpx_power
+from flow_tools.templated_flow_builder import *
 
 
 _FLOW_DIR = pathlib.Path("flow")
@@ -24,33 +26,8 @@ _CONSTRUCT_OUT_FILENAME = _FLOW_DIR / "construct.py"
 _QUERY_TPL_FILENAME = _FLOW_DIR / "query.tcl.tpl"
 _QUERY_OUT_FILENAME = _BUILD_DIR / "query.tcl"
 _SYN_RUN_STEP = "synopsys-dc-synthesis"
-_SYN_RUN_STEP_NUMBER = 5
 _SYN_QUERY_STEP = "synopsys-dc-query"
-_SYN_QUERY_STEP_NUMBER = 6
 _POWER_STEP = "synopsys-ptpx-gl"
-_POWER_STEP_NUMBER = 9
-
-
-def _render_template(tpl_filename, out_filename, opts):
-    with open(tpl_filename, "r") as f:
-        tpl = jinja2.Template(f.read())
-    with open(out_filename, "w") as f:
-        f.write(tpl.render(**opts))
-
-
-def _run_step(build_dir, step):
-    cwd = str(build_dir.resolve())
-    cmd = ["make", str(step)]
-    subprocess.run(cmd, cwd=cwd)
-
-
-def _mflowgen_run(design_dir, build_dir, run_step=None):
-    cmd = ["mflowgen", "run", "--design", str(design_dir.resolve())]
-    cwd = str(build_dir.resolve())
-    subprocess.run(cmd, cwd=cwd)
-    if run_step is None:
-        return
-    _run_step(build_dir, run_step)
 
 
 def _get_area_report(build_dir, design_name):
@@ -64,6 +41,7 @@ def _get_timing_report(build_dir, design_name):
     area_report_filename = report_dir / f"{design_name}.mapped.timing.setup.rpt"
     return parse_dc_timing(area_report_filename)
 
+
 def _get_power_report(build_dir, design_name):
     report_dir = build_dir / "reports"
     power_report_filename = report_dir / f"{design_name}.power.hier.rpt"
@@ -71,12 +49,8 @@ def _get_power_report(build_dir, design_name):
 
 
 def _post_synth_timing_query(build_dir, from_pin, to_pin):
-    opts = {"from": from_pin, "to": to_pin}
-    _render_template(_QUERY_TPL_FILENAME, _QUERY_OUT_FILENAME, opts)
-    _run_step(build_dir, _SYN_QUERY_STEP)
-    query_report = (f"{build_dir}/{_SYN_QUERY_STEP_NUMBER}-synopsys-dc-query/"
-                    f"reports/timing_query.rpt")
-    return parse_dc_timing(query_report)
+    timing_report_filename = build_dir / "reports/timing_query.rpt"
+    return parse_dc_timing(timing_report_filename)
 
 
 def _get_clk_name(ckt):
@@ -88,44 +62,69 @@ def _get_clk_name(ckt):
 
 
 def _main(ckt, opts):
-    with tempfile.TemporaryDirectory() as directory:
-        src_basename = f"{directory}/design"
-        m.compile(src_basename, ckt, coreir_libs={"float_DW"})
-        shutil.copyfile(f"{src_basename}.v", _DESIGN_FILENAME)
-        generate_testbench(ckt, directory)
-        shutil.copyfile(f"{directory}/{ckt.name}_tb.sv", _TESTBENCH_FILENAME)
     construct_opts = {
         "design_name": ckt.name,
         "clock_period": opts["clock_period"],
         "clock_net": _get_clk_name(ckt),
     }
-    _render_template(
-        _CONSTRUCT_TPL_FILENAME, _CONSTRUCT_OUT_FILENAME, construct_opts)
-    _mflowgen_run(
-        design_dir=_FLOW_DIR, build_dir=_BUILD_DIR, run_step=_SYN_RUN_STEP)
-    syn_step_dir = f"{_SYN_RUN_STEP_NUMBER}-{_SYN_RUN_STEP}"
-    syn_build_dir = _BUILD_DIR / syn_step_dir
+    flow_builder = TemplatedFlowBuilder()
+    flow_builder.set_flow_dir("flow")
+    flow_builder.add_template(
+        FileTemplate(
+            _CONSTRUCT_TPL_FILENAME,
+            _CONSTRUCT_OUT_FILENAME,
+            construct_opts,))
+    # TODO(rsetaluri,alexcarsello): Make non-design specific.
+    flow_builder.add_template(
+        FileTemplate(
+            _QUERY_TPL_FILENAME,
+            _QUERY_OUT_FILENAME,
+            dict(from_pin="I0[8]", to_pin="*")))
+    with tempfile.TemporaryDirectory() as directory:
+        design_basename = f"{directory}/design"
+        m.compile(design_basename, ckt, coreir_libs={"float_DW"})
+        flow_builder.add_template(
+            FileCopy(
+                f"{design_basename}.v",
+                _DESIGN_FILENAME))
+        generate_testbench(ckt, directory)
+        flow_builder.add_template(
+            FileCopy(
+                f"{directory}/{ckt.name}_tb.sv",
+                _TESTBENCH_FILENAME))
+        flow = flow_builder.build()
+    flow.build(_BUILD_DIR)
+    syn_step = flow.get_step(_SYN_RUN_STEP)
+    syn_step.run()
+    syn_build_dir = syn_step.get_build_dir()
+
     area_report = _get_area_report(syn_build_dir, ckt.name)
     print ("=========== AREA REPORT =======================")
     for k, v in area_report.items():
         print (f"{k}: {v}")
     print ("===============================================")
+
     timing_report = _get_timing_report(syn_build_dir, ckt.name)
     print ("=========== TIMING REPORT =======================")
     for k1, d in timing_report.items():
         for k2, v in d.items():
             print (f"{k1} -> {k2}: {v}")
     print ("===============================================")
-    # TODO(rsetaluri,alexcarsello): Make this non-design specific.
-    timing_query_report = _post_synth_timing_query(_BUILD_DIR, "I0[8]", "*")
+
+    timing_query_step = flow.get_step(_SYN_QUERY_STEP)
+    timing_query_step.run()
+    timing_query_build_dir = timing_query_step.get_build_dir()
+    timing_query_report = _post_synth_timing_query(
+        timing_query_build_dir, "I0[8]", "*")
     print ("=========== TIMING QUERY REPORT =======================")
     for k1, d in timing_query_report.items():
         for k2, v in d.items():
             print (f"{k1} -> {k2}: {v}")
     print ("===============================================")
-    _run_step(_BUILD_DIR, _POWER_STEP)
-    power_step_dir = f"{_POWER_STEP_NUMBER}-{_POWER_STEP}"
-    power_build_dir = _BUILD_DIR / power_step_dir
+
+    power_step = flow.get_step(_POWER_STEP)
+    power_step.run()
+    power_build_dir = power_step.get_build_dir()
     power_report = _get_power_report(power_build_dir, ckt.name)
     print ("=========== POWER REPORT =======================")
     for k1, d in power_report.items():
@@ -160,7 +159,7 @@ def _get_ckt(args):
     if args.generator is not None:
         gen = getattr(py_module, args.generator)
         params = _make_params(gen, args)
-        print ("Generator params", params)
+        logging.info(f"Generator params {params}")
         return gen(**params)
     raise NotImplementedError()
 
@@ -178,5 +177,5 @@ if __name__ == "__main__":
     ckt = _get_ckt(args)
     opts_keys = list(action.dest for action in opts_group._group_actions)
     opts = {k: getattr(args, k) for k in opts_keys}
-    print (f"Running with opts {opts}")
+    logging.info(f"Running with opts {opts}")
     _main(ckt, opts)
