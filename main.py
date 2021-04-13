@@ -18,29 +18,6 @@ _FLOW_DIR = pathlib.Path("flow")
 _BUILD_DIR = pathlib.Path("build")
 
 
-def _get_area_report(build_dir, design_name):
-    report_dir = build_dir / "reports"
-    area_report_filename = report_dir / f"{design_name}.mapped.area.rpt"
-    return parse_dc_area(area_report_filename)
-
-
-def _get_timing_report(build_dir, design_name):
-    report_dir = build_dir / "reports"
-    area_report_filename = report_dir / f"{design_name}.mapped.timing.setup.rpt"
-    return parse_dc_timing(area_report_filename)
-
-
-def _get_power_report(build_dir, design_name):
-    report_dir = build_dir / "reports"
-    power_report_filename = report_dir / f"{design_name}.power.hier.rpt"
-    return parse_ptpx_power(power_report_filename)
-
-
-def _post_synth_timing_query(build_dir, from_pin, to_pin):
-    timing_report_filename = build_dir / "reports/timing_query.rpt"
-    return parse_dc_timing(timing_report_filename)
-
-
 def _make_flow(ckt, opts):
     clk = m.get_default_clocks(ckt)[m.Clock]
     clk_name = clk if clk is None else f"'{clk.name.name}'"
@@ -83,13 +60,15 @@ def _main(ckt, opts):
     syn_step = flow.get_step("synopsys-dc-synthesis")
     syn_step.run()
 
-    area_report = _get_area_report(syn_step.get_build_dir(), ckt.name)
+    area_report = parse_dc_area(
+        syn_step.get_report(f"{ckt.name}.mapped.area.rpt"))
     print ("=========== AREA REPORT =======================")
     for k, v in area_report.items():
         print (f"{k}: {v}")
     print ("===============================================")
 
-    timing_report = _get_timing_report(syn_step.get_build_dir(), ckt.name)
+    timing_report = parse_dc_timing(
+        syn_step.get_report(f"{ckt.name}.mapped.timing.setup.rpt"))
     print ("=========== TIMING REPORT =======================")
     for k1, d in timing_report.items():
         for k2, v in d.items():
@@ -98,8 +77,8 @@ def _main(ckt, opts):
 
     timing_query_step = flow.get_step("synopsys-dc-query")
     timing_query_step.run()
-    timing_query_report = _post_synth_timing_query(
-        timing_query_step.get_build_dir(), "I0[8]", "*")
+    timing_query_report = parse_dc_timing(
+        timing_query_step.get_report("timing_query.rpt"))
     print ("=========== TIMING QUERY REPORT =======================")
     for k1, d in timing_query_report.items():
         for k2, v in d.items():
@@ -108,7 +87,10 @@ def _main(ckt, opts):
 
     power_step = flow.get_step("synopsys-ptpx-gl")
     power_step.run()
-    power_report = _get_power_report(power_step.get_build_dir(), ckt.name)
+    power_report = parse_ptpx_power(
+        power_step.get_report(f"{ckt.name}.power.hier.rpt"))
+
+
     print ("=========== POWER REPORT =======================")
     for k1, d in power_report.items():
         print(f"{k1}:")

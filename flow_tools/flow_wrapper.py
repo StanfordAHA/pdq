@@ -38,6 +38,9 @@ class StepWrapper:
     def get_build_dir(self):
         return self._flow()._get_build_dir_of_step(self)
 
+    def get_report(self, report_name):
+        return self.get_build_dir() / "reports" / report_name
+
 
 @dataclasses.dataclass
 class FlowWrapperInterface(abc.ABC):
