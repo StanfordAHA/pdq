@@ -41,19 +41,13 @@ def _post_synth_timing_query(build_dir, from_pin, to_pin):
     return parse_dc_timing(timing_report_filename)
 
 
-def _get_clk_name(ckt):
-    """Helper function to return name of top level clock (or None)"""
-    clk = m.get_default_clocks(ckt)[m.Clock]
-    if clk is None:
-        return None
-    return f"'{clk.name.name}'"
-
-
 def _make_flow(ckt, opts):
+    clk = m.get_default_clocks(ckt)[m.Clock]
+    clk_name = clk if clk is None else f"'{clk.name.name}'"
     construct_opts = {
         "design_name": ckt.name,
         "clock_period": opts["clock_period"],
-        "clock_net": _get_clk_name(ckt),
+        "clock_net": clk_name,
     }
     builder = TemplatedFlowBuilder()
     builder.set_flow_dir(_FLOW_DIR)
