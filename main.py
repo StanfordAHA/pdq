@@ -3,61 +3,22 @@ import importlib
 import inspect
 import logging
 import pathlib
-import tempfile
-
-import magma as m
 
 from common.reporting import make_header
-from circuit_tools.generate_testbench import generate_testbench
+from flow_tools.basic_flow import make_basic_flow, BasicFlowOpts
 from report_parsing.parsers import parse_dc_area
 from report_parsing.parsers import parse_dc_timing
 from report_parsing.parsers import parse_ptpx_power
-from flow_tools.templated_flow_builder import *
-
-
-_FLOW_DIR = pathlib.Path("flow")
-_BUILD_DIR = pathlib.Path("build")
-
-
-def _make_flow(ckt, opts):
-    clk = m.get_default_clocks(ckt)[m.Clock]
-    clk_name = clk if clk is None else f"'{clk.name.name}'"
-    construct_opts = {
-        "design_name": ckt.name,
-        "clock_period": opts["clock_period"],
-        "clock_net": clk_name,
-    }
-    builder = TemplatedFlowBuilder()
-    builder.set_flow_dir(_FLOW_DIR)
-    builder.add_template(
-        FileTemplate(
-            builder.get_relative("construct.py.tpl"),
-            builder.get_relative("construct.py"),
-            construct_opts))
-    # TODO(rsetaluri,alexcarsello): Make pins non-design specific.
-    builder.add_template(
-        FileTemplate(
-            builder.get_relative("query.tcl.tpl"),
-            _BUILD_DIR / "query.tcl",
-            dict(from_pin="I0[8]", to_pin="*")))
-    with tempfile.TemporaryDirectory() as directory:
-        design_basename = f"{directory}/design"
-        m.compile(design_basename, ckt, coreir_libs={"float_DW"})
-        builder.add_template(
-            FileCopy(
-                f"{design_basename}.v",
-                builder.get_relative("rtl/design.v")))
-        generate_testbench(ckt, directory)
-        builder.add_template(
-            FileCopy(
-                f"{directory}/{ckt.name}_tb.sv",
-                builder.get_relative("testbench/testbench.sv")))
-        return builder.build()
 
 
 def _main(ckt, opts):
-    flow = _make_flow(ckt, opts)
-    flow.build(_BUILD_DIR)
+    opts = BasicFlowOpts(
+        pathlib.Path("flow"),
+        pathlib.Path("build"),
+        ckt, opts.get("clock_period"))
+    flow = make_basic_flow(opts)
+    flow.build(opts.build_dir)
+
     syn_step = flow.get_step("synopsys-dc-synthesis")
     syn_step.run()
 
