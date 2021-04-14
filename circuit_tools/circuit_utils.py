@@ -7,7 +7,7 @@ from common.algorithms import only
 
 
 def find_instances_by_name(ckt: m.DefineCircuitKind, name: str):
-    return [inst for inst in ckt.instances if name in inst.name]
+    return (inst for inst in ckt.instances if name in inst.name)
 
 
 def find_ref(

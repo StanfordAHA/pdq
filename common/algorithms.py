@@ -1,7 +1,16 @@
-from typing import List
+from typing import Iterable
 
 
-def only(l: List):
-    if len(l) != 1:
-        raise ValueError("list should have exactly one element")
-    return l[0]
+def only(lst: Iterable):
+    err = f"iterable expected to have exactly one element; got {lst}"
+    it = iter(lst)
+    try:
+        value = next(it)
+    except StopIteration:
+        raise ValueError(err)
+    try:
+        next(it)
+    except StopIteration:
+        return value
+    else:
+        raise ValueError(err)
