@@ -8,7 +8,7 @@ import tempfile
 import magma as m
 
 from common.reporting import make_header
-from generate_testbench import generate_testbench
+from circuit_tools.generate_testbench import generate_testbench
 from report_parsing.parsers import parse_dc_area
 from report_parsing.parsers import parse_dc_timing
 from report_parsing.parsers import parse_ptpx_power
