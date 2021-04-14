@@ -1,11 +1,12 @@
 import dataclasses
 import functools
+import logging
 
 
 @dataclasses.dataclass(frozen=True)
 class ValidatorResult:
     ok: bool
-    msg: str = ""
+    err: Exception = None
 
     def __bool__(self):
         return self.ok
@@ -15,8 +16,14 @@ class ValidatorResult:
         return cls(True)
 
     @classmethod
-    def make_error(cls, msg: str):
-        return cls(False, msg=msg)
+    def make_error(cls, err: Exception):
+        return cls(False, err=err)
+
+    def throw(self):
+        if self.ok:
+            logging.warning("Trying to throw from ok result; returning")
+            return
+        raise self.err
 
 
 def validator(fn):
@@ -26,7 +33,7 @@ def validator(fn):
         try:
             fn(*args, **kwargs)
         except AssertionError as e:
-            return ValidatorResult.make_error(str(e))
+            return ValidatorResult.make_error(e)
         return ValidatorResult.make_ok()
 
     return _wrapper

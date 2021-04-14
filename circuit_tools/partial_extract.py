@@ -1,10 +1,14 @@
 import dataclasses
+from types import SimpleNamespace
 from typing import Any, List, Tuple
 
 import magma as m
 
+from common.algorithms import only
 from common.validator import validator
-from circuit_tools.circuit_utils import find_ref
+from circuit_tools.circuit_utils import (DefnSelector, find_inst_ref,
+                                         find_defn_ref, make_port_selector,
+                                         find_instances_by_name)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -19,14 +23,14 @@ def validate_path(path: SignalPath, ckt: m.DefineCircuitKind):
     assert isinstance(path.src, m.Out(m.Bit))
     assert isinstance(path.dst, m.In(m.Bit))
     for value in (path.src, path.dst):
-        ref = find_ref(value.name, lambda r: isinstance(r, m.DefnRef))
+        ref = find_defn_ref(value)
         assert ref is not None and ref.defn is ckt
     src = path.src
     for in_pin, out_pin in path.path:
         assert in_pin.trace() is src
         inst = None
         for value in (in_pin, out_pin):
-            ref = find_ref(value.name, lambda r: isinstance(r, m.InstRef))
+            ref = find_inst_ref(value)
             assert ref is not None and ref.inst in ckt.instances
             assert inst is None or inst is ref.inst
             inst = ref.inst
@@ -36,48 +40,47 @@ def validate_path(path: SignalPath, ckt: m.DefineCircuitKind):
 def partial_extract(ckt: m.DefineCircuitKind, path: SignalPath):
     valid = validate_path(path, ckt)
     if not valid:
-        raise ValueError(f"Invalid path: {path} ({valid.msg})")
-    extra_ports = {}
-    instances = []
+        valid.throw()
+    partial_ckt_name = f"Partial_{ckt.name}"
+    instances = {}
+    ports = {}
+    connections = []
+    ports["partial_src_pin__"] = None, type(path.src).flip()
+    ports["partial_dst_pin__"] = None, type(path.dst).flip()
+    src_selector = DefnSelector(None, "partial_src_pin__")
+    dst_selector = DefnSelector(None, "partial_dst_pin__")
+    curr_selector = src_selector
     for in_pin, out_pin in path.path:
-        inst = in_pin.name.inst
-        for port in type(inst).interface.ports.values():
-            name = port.name.name
-            if name == in_pin.name.name or name == out_pin.name.name:
-                continue
-            extra_ports[(inst.name, name)] = type(port)
+        in_pin_selector = make_port_selector(in_pin)
+        connections.append((curr_selector, in_pin_selector))
+        curr_selector = make_port_selector(out_pin)
+        inst = only(find_instances_by_name(ckt, in_pin_selector.inst))
+        instances[inst.name] = type(inst)
+        for port_name, port in inst.interface.ports.items():
+            for bit in m.as_bits(port):
+                if bit is in_pin or bit is out_pin:
+                    continue
+                new_port_name = f"lifted_port_{len(ports)}__"
+                selector = make_port_selector(bit)
+                ports[new_port_name] = selector, type(bit)
+                connections.append((
+                    selector, DefnSelector(None, new_port_name)))
+    connections.append((curr_selector, dst_selector))
 
     class _Partial(m.Circuit):
-        io = m.IO(**{f"{inst_name}_{port_name}": T.flip()
-                     for (inst_name, port_name), T in extra_ports.items()})
-        io += m.IO(**{
-            path.src.name.name: type(path.src).flip(),
-            path.dst.name.name: type(path.dst).flip()
-        })
-        curr = getattr(io, path.src.name.name)
-        for in_pin, out_pin, in path.path:
-            orig_inst = in_pin.name.inst
-            inst = type(orig_inst)()
+        io = m.IO(**{name: T for name, (_, T) in ports.items()})
 
-            # HACK!
-            def _unmap_name(n):
-                if n == "in0":
-                    return "I0"
-                if n == "in1":
-                    return "I1"
-                if n == "out":
-                    return "O"
-                return n
+        _container = SimpleNamespace()
+        _container.interface = SimpleNamespace(ports=io.ports)
+        _container.instances = []
+        for name, T in instances.items():
+            inst = T(name=name)
+            _container.instances.append(inst)
+        for src, dst in connections:
+            m.wire(src.select(_container), dst.select(_container))
 
-            m.wire(curr, getattr(inst, _unmap_name(in_pin.name.name)))
-            curr = getattr(inst, _unmap_name(out_pin.name.name))
-
-            for port in inst.interface.ports.values():
-                name = port.name.name
-                if name == in_pin.name.name or name == out_pin.name.name:
-                    continue
-                m.wire(port, getattr(io, f"{orig_inst.name}_{name}"))
-        m.wire(curr, getattr(io, path.dst.name.name))
-        name = f"Partial_{ckt.name}"
+        # This has to be last in order to avoid other 'name's in the namespace
+        # from over-writing the name.
+        name = partial_ckt_name
 
     return _Partial
