@@ -1,8 +1,8 @@
 import pathlib
 import pytest
 
-from flow_tools.basic_flow import BasicFlowOpts, make_basic_flow
 from designs.registered_incrementer import RegisteredIncrementer
+from pdq.flow_tools.basic_flow import BasicFlowOpts, make_basic_flow
 
 
 @pytest.mark.parametrize("design", [RegisteredIncrementer(8)])

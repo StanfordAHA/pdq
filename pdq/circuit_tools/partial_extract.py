@@ -4,11 +4,11 @@ from typing import Any, List, Tuple
 
 import magma as m
 
-from common.algorithms import only
-from common.validator import validator
-from circuit_tools.circuit_utils import (DefnSelector, find_inst_ref,
-                                         find_defn_ref, make_port_selector,
-                                         find_instances_by_name)
+from pdq.common.algorithms import only
+from pdq.common.validator import validator
+from pdq.circuit_tools.circuit_utils import (
+    DefnSelector, find_inst_ref, find_defn_ref, make_port_selector,
+    find_instances_by_name)
 
 
 @dataclasses.dataclass(frozen=True)

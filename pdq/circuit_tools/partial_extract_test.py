@@ -1,19 +1,8 @@
-import magma as m
-
-from common.algorithms import only
 from designs.one_bit_alu import OneBitAlu
-from circuit_tools.circuit_utils import find_instances_by_name
-from circuit_tools.partial_extract import partial_extract, SignalPath
-
-
-class SimpleAlu(m.Circuit):
-    io = m.IO(
-        a=m.In(m.UInt[4]),
-        b=m.In(m.UInt[4]),
-        opcode=m.In(m.UInt[2]),
-        out=m.Out(m.UInt[4]))
-
-    io.out @= m.mux([io.a + io.b, io.a - io.b, io.a, io.b], io.opcode)
+from designs.simple_alu import SimpleAlu
+from pdq.common.algorithms import only
+from pdq.circuit_tools.circuit_utils import find_instances_by_name
+from pdq.circuit_tools.partial_extract import partial_extract, SignalPath
 
 
 def test_basic():

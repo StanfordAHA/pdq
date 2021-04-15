@@ -4,9 +4,9 @@ import tempfile
 
 import magma as m
 
-from flow_tools.templated_flow_builder import (
+from pdq.flow_tools.templated_flow_builder import (
     TemplatedFlowBuilder, FileTemplate, FileCopy)
-from circuit_tools.generate_testbench import generate_testbench
+from pdq.circuit_tools.generate_testbench import generate_testbench
 
 
 @dataclasses.dataclass(frozen=True)
