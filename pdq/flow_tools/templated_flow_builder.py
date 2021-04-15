@@ -7,7 +7,7 @@ from typing import Dict
 
 import jinja2
 
-from flow_tools.flow_wrapper import FlowWrapperInterface, StagedFlowWrapper
+from pdq.flow_tools.flow_wrapper import FlowWrapperInterface, StagedFlowWrapper
 
 
 class TemplateAction(abc.ABC):

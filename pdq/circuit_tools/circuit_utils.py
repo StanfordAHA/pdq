@@ -3,7 +3,7 @@ from typing import Callable, Optional, Union
 
 import magma as m
 
-from common.algorithms import only
+from pdq.common.algorithms import only
 
 
 def find_instances_by_name(ckt: m.DefineCircuitKind, name: str):

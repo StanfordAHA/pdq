@@ -4,11 +4,11 @@ import inspect
 import logging
 import pathlib
 
-from common.reporting import make_header
-from flow_tools.basic_flow import make_basic_flow, BasicFlowOpts
-from report_parsing.parsers import parse_dc_area
-from report_parsing.parsers import parse_dc_timing
-from report_parsing.parsers import parse_ptpx_power
+from pdq.common.reporting import make_header
+from pdq.flow_tools.basic_flow import make_basic_flow, BasicFlowOpts
+from pdq.report_parsing.parsers import parse_dc_area
+from pdq.report_parsing.parsers import parse_dc_timing
+from pdq.report_parsing.parsers import parse_ptpx_power
 
 
 def _main(ckt, opts):

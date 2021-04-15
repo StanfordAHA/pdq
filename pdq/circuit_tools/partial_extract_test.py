@@ -1,9 +1,9 @@
 import magma as m
 
-from common.algorithms import only
-from designs.one_bit_alu import OneBitAlu
-from circuit_tools.circuit_utils import find_instances_by_name
-from circuit_tools.partial_extract import partial_extract, SignalPath
+from pdq.common.algorithms import only
+from pdq.designs.one_bit_alu import OneBitAlu
+from pdq.circuit_tools.circuit_utils import find_instances_by_name
+from pdq.circuit_tools.partial_extract import partial_extract, SignalPath
 
 
 class SimpleAlu(m.Circuit):
