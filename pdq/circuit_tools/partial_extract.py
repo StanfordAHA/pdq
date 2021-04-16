@@ -1,6 +1,4 @@
-import dataclasses
 from types import SimpleNamespace
-from typing import Any, List, Tuple
 
 import magma as m
 
@@ -9,13 +7,7 @@ from pdq.common.validator import validator
 from pdq.circuit_tools.circuit_utils import (
     DefnSelector, find_inst_ref, find_defn_ref, make_port_selector,
     find_instances_by_name)
-
-
-@dataclasses.dataclass(frozen=True)
-class SignalPath:
-    src: m.Bit
-    dst: m.Bit
-    path: List[Tuple[m.Bit, m.Bit]]
+from pdq.circuit_tools.signal_path import SignalPath
 
 
 @validator
