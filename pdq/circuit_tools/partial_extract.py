@@ -3,30 +3,9 @@ from types import SimpleNamespace
 import magma as m
 
 from pdq.common.algorithms import only
-from pdq.common.validator import validator
 from pdq.circuit_tools.circuit_utils import (
-    DefnSelector, find_inst_ref, find_defn_ref, make_port_selector,
-    find_instances_by_name)
-from pdq.circuit_tools.signal_path import SignalPath
-
-
-@validator
-def validate_path(path: SignalPath, ckt: m.DefineCircuitKind):
-    assert isinstance(path.src, m.Out(m.Bit))
-    assert isinstance(path.dst, m.In(m.Bit))
-    for value in (path.src, path.dst):
-        ref = find_defn_ref(value)
-        assert ref is not None and ref.defn is ckt
-    src = path.src
-    for in_pin, out_pin in path.path:
-        assert in_pin.trace() is src
-        inst = None
-        for value in (in_pin, out_pin):
-            ref = find_inst_ref(value)
-            assert ref is not None and ref.inst in ckt.instances
-            assert inst is None or inst is ref.inst
-            inst = ref.inst
-        src = out_pin
+    DefnSelector, make_port_selector, find_instances_by_name)
+from pdq.circuit_tools.signal_path import SignalPath, validate_path
 
 
 def partial_extract(ckt: m.DefineCircuitKind, path: SignalPath):
