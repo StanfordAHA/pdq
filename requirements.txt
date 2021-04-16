@@ -4,3 +4,4 @@
 -e git://github.com/phanrahan/peak.git#egg=peak
 -e git://github.com/StanfordAHA/lassen.git#egg=lassen
 -e git://github.com/StanfordAHA/gemstone.git#egg=gemstone
+-e magma_riscv_mini
