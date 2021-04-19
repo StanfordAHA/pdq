@@ -4,3 +4,6 @@
 [submodule "garnet"]
 	path = garnet
 	url = https://github.com/StanfordAHA/garnet.git
+[submodule "magma_riscv_mini"]
+	path = magma_riscv_mini
+	url = https://github.com/leonardt/magma_riscv_mini

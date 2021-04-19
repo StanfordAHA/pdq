@@ -1,3 +1,4 @@
+-e magma_riscv_mini
 -e git://github.com/phanrahan/magma.git#egg=magma-lang
 -e git://github.com/mflowgen/mflowgen.git#egg=mflowgen
 -e git://github.com/leonardt/fault.git#egg=fault
