@@ -28,6 +28,17 @@ def validate_query(query: SignalPathQuery, ckt: m.DefineCircuitKind):
         assert inst in ckt.instances
 
 
+def _path_is_thru(path: SignalPath, thru: List[m.Circuit]):
+    insts = set(thru)
+    for in_pin, _ in path.path:
+        ref = find_inst_ref(in_pin)
+        try:
+            insts.remove(ref.inst)
+        except KeyError:
+            pass
+    return len(insts) == 0
+
+
 def generate_paths(
         ckt: m.DefineCircuitKind, query: SignalPathQuery) -> List[SignalPath]:
     valid = validate_query(query, ckt)
@@ -59,4 +70,7 @@ def generate_paths(
 
     _generate([(query.dst, None)])
 
-    return [SignalPath(query.src, query.dst, path[:-1]) for path in paths]
+    paths = (SignalPath(query.src, query.dst, path[:-1]) for path in paths)
+    if query.thru:
+        paths = filter(lambda p: _path_is_thru(p, query.thru), paths)
+    return list(paths)

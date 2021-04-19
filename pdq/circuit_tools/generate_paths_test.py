@@ -69,3 +69,24 @@ def test_basic(generate_paths_test):
 
     # Check that we've found all the paths.
     assert len(generate_paths_test.paths) == 0
+
+
+def test_thru(generate_paths_test):
+    adder = generate_paths_test.get_instance("add")
+    query = SignalPathQuery(SimpleAlu.a[0], SimpleAlu.out[0], [adder])
+    generate_paths_test.generate_paths(query)
+
+    mux = generate_paths_test.get_instance("Mux")
+
+    # Check the path through the add.
+    for j, bit in enumerate(adder.O):
+        mux_in = getattr(mux, f"I{0}")
+        path = SignalPath(
+            src=SimpleAlu.a[0],
+            dst=SimpleAlu.out[0],
+            path=[(adder.I0[0], bit),
+                  (mux_in[j], mux.O[0])])
+        generate_paths_test.pop_path(path)
+
+    # Check that we've found all the paths.
+    assert len(generate_paths_test.paths) == 0
