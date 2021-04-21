@@ -38,7 +38,7 @@ def _arg_parser(fn):
 def _parse_gen_params(gen, args: argparse.Namespace):
     if args.params is None:
         return {}
-    gen_sig = inspect.signature(gen.__init__)
+    gen_sig = inspect.signature(gen)
     parser = argparse.ArgumentParser(add_help=False, prog=gen.__name__)
     for gen_sig_param in gen_sig.parameters.values():
         if gen_sig_param.name == "self":
@@ -48,6 +48,8 @@ def _parse_gen_params(gen, args: argparse.Namespace):
             kwargs["type"] = gen_sig_param.annotation
         if gen_sig_param.default is not inspect.Parameter.empty:
             kwargs["default"] = gen_sig_param.default
+        else:
+            kwargs["required"] = True
         parser.add_argument(f"-{gen_sig_param.name}", **kwargs)
     params = ["-" + p for p in args.params.split(",")]
     return vars(parser.parse_args(params))
