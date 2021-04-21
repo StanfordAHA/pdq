@@ -2,20 +2,20 @@ from designs.one_bit_alu import OneBitAlu
 from designs.simple_alu import SimpleAlu
 from pdq.common.algorithms import only
 from pdq.circuit_tools.circuit_utils import find_instances_by_name
-from pdq.circuit_tools.partial_extract import partial_extract, SignalPath
+from pdq.circuit_tools.partial_extract import partial_extract
+from pdq.circuit_tools.signal_path import SignalPath
 
 
 def test_basic():
     xor = only(find_instances_by_name(OneBitAlu, "xor"))
     mux = only(find_instances_by_name(OneBitAlu, "Mux"))
-    path = [
-        (xor.I0, xor.O),
-        (mux.I2, mux.O),
-    ]
     path = SignalPath(
         src=OneBitAlu.a,
         dst=OneBitAlu.out,
-        path=path,
+        path=[
+            (xor.I0, xor.O),
+            (mux.I2, mux.O),
+        ],
     )
 
     Partial = partial_extract(OneBitAlu, path)
@@ -38,14 +38,14 @@ def test_basic():
 def test_bits_select():
     add = only(find_instances_by_name(SimpleAlu, "add"))
     mux = only(find_instances_by_name(SimpleAlu, "Mux"))
-    path = [
-        (add.I0[0], add.O[0]),
-        (mux.I0[0], mux.O[0]),
-    ]
+
     path = SignalPath(
         src=SimpleAlu.a[0],
         dst=SimpleAlu.out[0],
-        path=path,
+        path=[
+            (add.I0[0], add.O[0]),
+            (mux.I0[0], mux.O[0]),
+        ],
     )
 
     Partial = partial_extract(SimpleAlu, path)

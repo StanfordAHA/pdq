@@ -23,7 +23,7 @@ Tests can be run using pytest:
 # Running
 Assuming you have access to the necessary physical design tools, code can be run using:
 
-    python basic_flow_main.py <design_package_name> [--module <module_name> | --generator <generator_name>] [--params <key>=<value>,...]
+    python basic_flow_main.py --package <design_package_name> [--module <module_name> | --generator <generator_name>] [--params <key>=<value>,...]
 
 This will run the query flow on either the specified module or generator from `<design_package_name>`. `<design_package_name>` should be specified as a "dot" path rather than a file path. For example, to run on the `Adder` generator found in the file `magma_examples/magma_examples/adder.py`, we could run
 
