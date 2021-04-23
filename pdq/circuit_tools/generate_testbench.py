@@ -14,15 +14,27 @@ def _make_random(T):
     raise NotImplementedError()
 
 
+def _update_clock(ckt, kwargs):
+    if "clock" in kwargs:
+        return True
+    clk = m.get_default_clocks(ckt)[m.Clock]
+    if clk is None:
+        return False
+    kwargs["clock"] = clk
+    return True
+
+
 def generate_uniform_random_stimulus(ckt, num_cycles=1, **kwargs):
+    clocked = _update_clock(ckt, kwargs)
     tester = fault.Tester(ckt, **kwargs)
+    step_fn = lambda: tester.step(2) if clocked else tester.eval
     for _ in range(num_cycles):
         # TODO(rsetaluri): Handle mixed type ports.
         for port in ckt.interface.ports.values():
             if not port.is_output() or port.is_clock():
                 continue
             tester.poke(port, _make_random(type(port)))
-        tester.step(2)
+        step_fn()
     return tester
 
 
