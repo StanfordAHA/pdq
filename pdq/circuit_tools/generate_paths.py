@@ -1,10 +1,12 @@
 import dataclasses
-from typing import List, Optional, Tuple
+from typing import List, Optional, Set, Tuple
 
 import magma as m
 
 from pdq.circuit_tools.circuit_utils import find_defn_ref, find_inst_ref
-from pdq.circuit_tools.signal_path import SignalPath
+from pdq.circuit_tools.signal_path import (
+    SignalPath, TopSignalPath, InternalSignalPath)
+from pdq.common.algorithms import try_call
 from pdq.common.validator import validator
 
 
@@ -28,19 +30,27 @@ def validate_query(query: SignalPathQuery, ckt: m.DefineCircuitKind):
         assert inst in ckt.instances
 
 
-def _path_is_thru(path: SignalPath, thru: List[m.Circuit]):
+def _filter_instances(path: SignalPath, insts: Set[m.Circuit]):
+    for bit in (path.src, path.dst):
+        ref = find_inst_ref(path.src)
+        if ref is None:
+            continue
+        try_call(lambda: insts.remove(ref.inst), KeyError)
+    if path.path is None:
+        return
+    for sub_path in path.path:
+        _filter_instances(sub_path, insts)
+
+
+def _path_is_thru(path: TopSignalPath, thru: List[m.Circuit]):
     insts = set(thru)
-    for in_pin, _ in path.path:
-        ref = find_inst_ref(in_pin)
-        try:
-            insts.remove(ref.inst)
-        except KeyError:
-            pass
+    _filter_instances(path, insts)
     return len(insts) == 0
 
 
 def generate_paths(
-        ckt: m.DefineCircuitKind, query: SignalPathQuery) -> List[SignalPath]:
+        ckt: m.DefineCircuitKind,
+        query: SignalPathQuery) -> List[TopSignalPath]:
     valid = validate_query(query, ckt)
     if not valid:
         valid.throw()
@@ -70,7 +80,9 @@ def generate_paths(
 
     _generate([(query.dst, None)])
 
-    paths = (SignalPath(query.src, query.dst, path[:-1]) for path in paths)
+    paths = ((InternalSignalPath(src, dst) for src, dst in path)
+             for path in paths)
+    paths = (TopSignalPath(query.src, query.dst, list(path)[:-1]) for path in paths)
     if query.thru:
         paths = filter(lambda p: _path_is_thru(p, query.thru), paths)
     return list(paths)
