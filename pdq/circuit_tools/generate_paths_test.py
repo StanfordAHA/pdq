@@ -1,7 +1,7 @@
 import pytest
 
 from designs.simple_alu import SimpleAlu
-from pdq.circuit_tools.circuit_utils import find_instances_by_name
+from pdq.circuit_tools.circuit_utils import find_instances_name_substring
 from pdq.circuit_tools.generate_paths import SignalPathQuery, generate_paths
 from pdq.circuit_tools.signal_path import (
     TopSignalPath, InternalSignalPath, paths_equal)
@@ -27,7 +27,7 @@ class _GeneratePathsTest:
             return self._instance_cache[name]
         except KeyError:
             pass
-        inst = only(find_instances_by_name(self.ckt, name))
+        inst = only(find_instances_name_substring(self.ckt, name))
         self._instance_cache[name] = inst
         return inst
 

@@ -1,13 +1,38 @@
 import dataclasses
-from typing import Callable, Optional, Union
+import functools
+from typing import Callable, Iterable, Optional, Union
 
 import magma as m
 
 from pdq.common.algorithms import only
 
 
-def find_instances_by_name(ckt: m.DefineCircuitKind, name: str):
-    return (inst for inst in ckt.instances if name in inst.name)
+def find_instances(
+        ckt: m.DefineCircuitKind,
+        fn: Callable[[m.Circuit], bool]) -> Iterable[m.Circuit]:
+    return filter(fn, ckt.instances)
+
+
+def find_instances_name(
+        ckt: m.DefineCircuitKind,
+        fn: Callable[[str], bool]) -> Iterable[m.Circuit]:
+    return find_instances(ckt, lambda i: fn(i.name))
+
+
+def find_instances_type(
+        ckt: m.DefineCircuitKind,
+        fn: Callable[[m.DefineCircuitKind], bool]) -> Iterable[m.Circuit]:
+    return find_instances(ckt, lambda i: fn(type(i)))
+
+
+def find_instances_name_equals(
+        ckt: m.DefineCircuitKind, name: str) -> Iterable[m.Circuit]:
+    return find_instances_name(ckt, lambda s: s == name)
+
+
+def find_instances_name_substring(
+        ckt: m.DefineCircuitKind, name_substr: str) -> Iterable[m.Circuit]:
+    return find_instances_name(ckt, lambda s: name_substr in s)
 
 
 def find_ref(
@@ -62,7 +87,7 @@ class PlacedInstSelector(m.value_utils.Selector):
     inst: str
 
     def _select(self, defn: m.DefineCircuitKind):
-        return only(find_instances_by_name(defn, self.inst))
+        return only(find_instances_name_equals(defn, self.inst))
 
     def __str__(self):
         return f".{self.inst}{self._child_str()}"

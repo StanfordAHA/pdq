@@ -2,14 +2,15 @@ from designs.one_bit_alu import OneBitAlu
 from designs.simple_alu import SimpleAlu
 from magma_examples.magma_examples.shift_register import ShiftRegister
 from pdq.common.algorithms import only
-from pdq.circuit_tools.circuit_utils import find_instances_by_name
+from pdq.circuit_tools.circuit_utils import (
+    find_instances_name_equals, find_instances_name_substring)
 from pdq.circuit_tools.partial_extract import partial_extract
 from pdq.circuit_tools.signal_path import TopSignalPath, InternalSignalPath
 
 
 def test_basic():
-    xor = only(find_instances_by_name(OneBitAlu, "xor"))
-    mux = only(find_instances_by_name(OneBitAlu, "Mux"))
+    xor = only(find_instances_name_substring(OneBitAlu, "xor"))
+    mux = only(find_instances_name_substring(OneBitAlu, "Mux"))
     path = TopSignalPath(
         src=OneBitAlu.a,
         dst=OneBitAlu.out,
@@ -27,8 +28,8 @@ def test_basic():
 
     # Check that there are only 2 instances.
     assert len(Partial.instances) == 2
-    new_xor = only(find_instances_by_name(Partial, "xor"))
-    new_mux = only(find_instances_by_name(Partial, "Mux"))
+    new_xor = only(find_instances_name_substring(Partial, "xor"))
+    new_mux = only(find_instances_name_substring(Partial, "Mux"))
     assert new_xor.name == xor.name
     assert type(new_xor) is type(xor)
     assert new_mux.name == mux.name
@@ -41,8 +42,8 @@ def test_basic():
 
 
 def test_bits_select():
-    add = only(find_instances_by_name(SimpleAlu, "add"))
-    mux = only(find_instances_by_name(SimpleAlu, "Mux"))
+    add = only(find_instances_name_substring(SimpleAlu, "add"))
+    mux = only(find_instances_name_substring(SimpleAlu, "Mux"))
 
     path = TopSignalPath(
         src=SimpleAlu.a[0],
@@ -61,8 +62,8 @@ def test_bits_select():
 
     # Check that there are only 2 instances.
     assert len(Partial.instances) == 2
-    new_add = only(find_instances_by_name(Partial, "add"))
-    new_mux = only(find_instances_by_name(Partial, "Mux"))
+    new_add = only(find_instances_name_substring(Partial, "add"))
+    new_mux = only(find_instances_name_substring(Partial, "Mux"))
     assert new_add.name == add.name
     assert type(new_add) is type(add)
     assert new_mux.name == mux.name
@@ -75,11 +76,11 @@ def test_bits_select():
 
 
 def test_hierarchical():
-    regs = find_instances_by_name(ShiftRegister, "Register_inst")
+    regs = find_instances_name_substring(ShiftRegister, "Register_inst")
     regs = list(sorted(regs, key=lambda r: r.name))
 
     def _get_sub_reg(reg):
-        return only(find_instances_by_name(type(reg), "reg_"))
+        return only(find_instances_name_substring(type(reg), "reg_"))
 
     path = TopSignalPath(
         src=ShiftRegister.I,
@@ -122,7 +123,7 @@ def test_hierarchical():
         "Register_inst2": type(regs[2]),
         "Register_inst3__reg_P1_inst0": type(_get_sub_reg(regs[3]))
     }
-    new_insts = {name: only(find_instances_by_name(Partial, name))
+    new_insts = {name: only(find_instances_name_equals(Partial, name))
                  for name in expected_insts}
     for name, T in expected_insts.items():
         assert new_insts[name].name == name
