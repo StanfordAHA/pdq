@@ -18,12 +18,12 @@ def _partial_extract_internal(
         path: InternalSignalPath, context: List[m.Circuit], state):
     ref = find_inst_ref(path.src)
     inst = ref.inst
-    context += [inst]
+    new_context = context + [inst]
     if path.path is not None:
         for sub_path in path.path:
-            _partial_extract_internal(sub_path, context, state)
+            _partial_extract_internal(sub_path, new_context, state)
         return
-    inst_name = f"{'__'.join(inst.name for inst in context)}"
+    inst_name = f"{'__'.join(inst.name for inst in new_context)}"
     state.instances[inst_name] = type(inst)
     selector = _retarget_selector(make_port_selector(path.src), inst_name)
     state.connections.append((state.curr, selector))
