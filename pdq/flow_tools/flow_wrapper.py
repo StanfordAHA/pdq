@@ -59,7 +59,9 @@ class FlowWrapperInterface(abc.ABC):
 
     def _run_step(self, step: StepWrapper):
         logging.info(f"Running step {step.name}")
-        self._run_build_cmd(["make", step.name], shell=True)
+        # NOTE(rsetaluri): Since we pass shell=True, we need to pass the entire
+        # command as a single string.
+        self._run_build_cmd(f"make {step.name}"], shell=True)
 
     def _get_build_dir_of_step(self, step: StepWrapper) -> pathlib.Path:
         build_dir = pathlib.Path(self._get_build_dir())
