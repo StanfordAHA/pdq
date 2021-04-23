@@ -7,13 +7,14 @@ def only(lst: Iterable):
     try:
         value = next(it)
     except StopIteration:
-        raise ValueError(err)
+        raise ValueError("Expected one element, got []") from None
     try:
-        next(it)
+        new_value = next(it)
     except StopIteration:
         return value
     else:
-        raise ValueError(err)
+        msg = f"Expecte one element got {[value, new_value] + list(it)}"
+        raise ValueError(msg)
 
 
 def try_call(fn: Callable[[], Any], ExceptionType: Any):
