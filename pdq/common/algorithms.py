@@ -1,4 +1,4 @@
-from typing import Iterable
+from typing import Any, Callable, Iterable
 
 
 def only(lst: Iterable):
@@ -14,3 +14,14 @@ def only(lst: Iterable):
         return value
     else:
         raise ValueError(err)
+
+
+def try_call(fn: Callable[[], Any], ExceptionType: Any):
+    if ExceptionType is None:
+        ExceptionType = BaseException
+    try:
+        ret = fn()
+    except ExceptionType:
+        pass
+    else:
+        return ret
