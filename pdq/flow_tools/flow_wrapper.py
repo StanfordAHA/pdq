@@ -86,7 +86,7 @@ class StagedFlowWrapper(FlowWrapperInterface):
     def _populate_steps(self):
         self.steps.clear()
         ret = self._run_build_cmd(["make", "list"], capture_output=True)
-        targets = yaml.load(ret.stdout)["Targets"]
+        targets = yaml.safe_load(ret.stdout)["Targets"]
         for dct in targets:
             assert len(dct) == 1
             number, name = list(dct.items())[0]
