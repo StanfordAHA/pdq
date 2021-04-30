@@ -44,6 +44,8 @@ parameters:
   # Flatten effort 0 is strict hierarchy, 3 is full flattening
   flatten_effort: 0
   topographical: True
+  # Use Design Explorer for fast, low-effort synth
+  explore: False
   # Multithreading available to the tool
   nthreads: 16
   # Enable high-effort area optimization (has longer spin time)
