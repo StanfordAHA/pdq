@@ -5,19 +5,17 @@ import pathlib
 from pdq.common.reporting import make_header
 from pdq.common.main_utils import (
     add_design_arguments, parse_design_args, slice_args)
-from pdq.flow_tools.basic_flow import make_basic_flow, BasicFlowOpts
+from pdq.flow_tools.basic_flow import (
+    BasicFlowOpts, make_basic_flow, basic_flow_build_dir)
 from pdq.report_parsing.parsers import parse_dc_area
 from pdq.report_parsing.parsers import parse_dc_timing
 from pdq.report_parsing.parsers import parse_ptpx_power
 
 
 def _main(ckt, opts):
-    opts = BasicFlowOpts(
-        pathlib.Path("flow"),
-        pathlib.Path("build"),
-        ckt, opts.get("clock_period"))
-    flow = make_basic_flow(opts)
-    flow.build(opts.build_dir)
+    opts = BasicFlowOpts(**opts)
+    flow = make_basic_flow(ckt, opts)
+    flow.build(basic_flow_build_dir())
 
     syn_step = flow.get_step("synopsys-dc-synthesis")
     syn_step.run()

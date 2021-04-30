@@ -9,24 +9,29 @@ from pdq.flow_tools.templated_flow_builder import (
 from pdq.circuit_tools.generate_testbench import generate_testbench
 
 
+_BASIC_FLOW_FLOW_DIR = pathlib.Path("flow")
+_BASIC_FLOW_BUILD_DIR = pathlib.Path("build")
+
+
+def basic_flow_build_dir():
+    return _BASIC_FLOW_BUILD_DIR
+
+
 @dataclasses.dataclass(frozen=True)
 class BasicFlowOpts:
-    flow_dir: pathlib.Path
-    build_dir: pathlib.Path
-    ckt: m.DefineCircuitKind
     clock_period: float = 2.0
 
 
-def make_basic_flow(opts: BasicFlowOpts):
-    clk = m.get_default_clocks(opts.ckt)[m.Clock]
+def make_basic_flow(ckt: m.DefineCircuitKind, opts: BasicFlowOpts):
+    clk = m.get_default_clocks(ckt)[m.Clock]
     clk_name = clk if clk is None else f"'{clk.name.name}'"
     construct_opts = {
-        "design_name": opts.ckt.name,
+        "design_name": ckt.name,
         "clock_period": opts.clock_period,
         "clock_net": clk_name,
     }
     builder = TemplatedFlowBuilder()
-    builder.set_flow_dir(opts.flow_dir)
+    builder.set_flow_dir(_BASIC_FLOW_FLOW_DIR)
     builder.add_template(
         FileTemplate(
             builder.get_relative("construct.py.tpl"),
@@ -36,18 +41,18 @@ def make_basic_flow(opts: BasicFlowOpts):
     builder.add_template(
         FileTemplate(
             builder.get_relative("query.tcl.tpl"),
-            opts.build_dir / "query.tcl",
+            _BASIC_FLOW_BUILD_DIR / "query.tcl",
             dict(from_pin="I0[8]", to_pin="*")))
     with tempfile.TemporaryDirectory() as directory:
         design_basename = f"{directory}/design"
-        m.compile(design_basename, opts.ckt, coreir_libs={"float_DW"})
+        m.compile(design_basename, ckt, coreir_libs={"float_DW"})
         builder.add_template(
             FileCopy(
                 f"{design_basename}.v",
                 builder.get_relative("rtl/design.v")))
-        generate_testbench(opts.ckt, directory)
+        generate_testbench(ckt, directory)
         builder.add_template(
             FileCopy(
-                f"{directory}/{opts.ckt.name}_tb.sv",
+                f"{directory}/{ckt.name}_tb.sv",
                 builder.get_relative("testbench/testbench.sv")))
         return builder.build()
