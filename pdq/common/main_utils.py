@@ -38,7 +38,16 @@ def _arg_parser(fn):
 def _parse_gen_params(gen, args: argparse.Namespace):
     if args.params is None:
         return {}
-    gen_sig = inspect.signature(gen)
+    # NOTE(rsetaluri): We need to do this check because of how inspect.signature
+    # deals with metaclasses. Specifically, for Generator2 subclasses, it grabs
+    # the metaclass's __call__ function which is generic (instead of the class's
+    # __init__ function).
+    try:
+        gen.__init__
+    except AttributeError:
+        gen_sig = inspect.signature(gen)
+    else:
+        gen_sig = inspect.signature(gen.__init__)
     parser = argparse.ArgumentParser(add_help=False, prog=gen.__name__)
     for gen_sig_param in gen_sig.parameters.values():
         if gen_sig_param.name == "self":
