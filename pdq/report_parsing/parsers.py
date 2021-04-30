@@ -14,6 +14,7 @@ def parse_dc_area(report_name):
             # Area numbers start 3 lines after tag_1
             line_num = ind + 3
             break
+    ind = line_num
     for line in lines[line_num:]:
         #tag_2 marks end of area breakdown
         if tag_2 in line:
@@ -21,6 +22,13 @@ def parse_dc_area(report_name):
         else:
             (name, area, _, _, _, _, _) = line.strip().split()
             area_dict[name] = area
+        ind += 1
+
+    # Grab total area.
+    line = lines[ind + 1]
+    name, area, _, _ = line.strip().split()
+    assert name == "Total"
+    area_dict["TOTAL"] = area
 
     return area_dict
 
