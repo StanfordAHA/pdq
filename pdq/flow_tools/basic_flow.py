@@ -9,7 +9,7 @@ from pdq.flow_tools.templated_flow_builder import (
 from pdq.circuit_tools.generate_testbench import generate_testbench
 
 
-_BASIC_FLOW_FLOW_DIR = pathlib.Path("flow")
+_BASIC_FLOW_FLOW_DIR = pathlib.Path("basic_flow")
 _BASIC_FLOW_BUILD_DIR = pathlib.Path("build")
 
 
