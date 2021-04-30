@@ -20,6 +20,7 @@ def basic_flow_build_dir():
 @dataclasses.dataclass(frozen=True)
 class BasicFlowOpts:
     clock_period: float = 2.0
+    inline: bool = False
 
 
 def make_basic_flow(ckt: m.DefineCircuitKind, opts: BasicFlowOpts):
@@ -45,7 +46,8 @@ def make_basic_flow(ckt: m.DefineCircuitKind, opts: BasicFlowOpts):
             dict(from_pin="I0[8]", to_pin="*")))
     with tempfile.TemporaryDirectory() as directory:
         design_basename = f"{directory}/design"
-        m.compile(design_basename, ckt, coreir_libs={"float_DW"})
+        m.compile(
+            design_basename, ckt, coreir_libs={"float_DW"}, inline=opts.inline)
         builder.add_template(
             FileCopy(
                 f"{design_basename}.v",
