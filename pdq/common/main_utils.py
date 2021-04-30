@@ -1,8 +1,10 @@
 import argparse
+import dataclasses
 import functools
 import importlib
 import inspect
 import logging
+from typing import Any, Tuple, Optional
 
 
 class _ParseArgError(BaseException):
@@ -92,3 +94,50 @@ def parse_design_args(args: argparse.Namespace):
         logging.info(f"Generator params {params}")
         return gen(**params)
     raise _ArgValueError()
+
+
+def _try_get_default(field: dataclasses.Field) -> Tuple[bool, Any]:
+    if field.default is not dataclasses.MISSING:
+        return True, field.default
+    if field.default_factory is not dataclasses.MISSING:
+        return True, field.default_factory
+    return False, None
+
+
+def add_opt_arguments(
+        parser: argparse.ArgumentParser, cls: type, name: Optional[str] = None):
+    if not dataclasses.is_dataclass(cls) or not isinstance(cls, type):
+        raise TypeError(f"Expected dataclass, got {cls} ({type(cls)})")
+    if name is None:
+        name = cls.__name__
+    grp = parser.add_argument_group(name)
+    fields = dataclasses.fields(cls)
+    for field in fields:
+        kwargs = {"type": field.type}
+        has_default, default_value = _try_get_default(field)
+        if not has_default:
+            kwargs["required"] = False
+        else:
+            kwargs["help"] = f"(default={default_value})"
+        grp.add_argument(f"--{field.name}", **kwargs)
+    return grp
+
+
+def parse_opt_args(args: argparse.Namespace, cls: type):
+    if not dataclasses.is_dataclass(cls) or not isinstance(cls, type):
+        raise TypeError(f"Expected dataclass, got {cls} ({type(cls)})")
+    opts = {}
+    fields = dataclasses.fields(cls)
+    for field in fields:
+        try:
+            opt = getattr(args, field.name)
+        except AttributeError:
+            pass
+        else:
+            if opt is not None:
+                opts[field.name] = opt
+                continue
+        has_default, _ = _try_get_default(field)
+        if not has_default:
+            raise RuntimeError(f"Missing opt '{field.name}'")
+    return opts

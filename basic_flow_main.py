@@ -4,7 +4,8 @@ import pathlib
 
 from pdq.common.reporting import make_header
 from pdq.common.main_utils import (
-    add_design_arguments, parse_design_args, slice_args)
+    add_design_arguments, parse_design_args, slice_args, add_opt_arguments,
+    parse_opt_args)
 from pdq.flow_tools.basic_flow import (
     BasicFlowOpts, make_basic_flow, basic_flow_build_dir)
 from pdq.report_parsing.parsers import parse_dc_area
@@ -60,10 +61,9 @@ def _main(ckt, opts):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     design_grp = add_design_arguments(parser)
-    opts_grp = parser.add_argument_group("opts")
-    opts_grp.add_argument("--clock_period", type=float, default=2.0)
+    opts_grp = add_opt_arguments(parser, BasicFlowOpts)
     args = parser.parse_args()
     ckt = parse_design_args(slice_args(args, design_grp))
-    opts = vars(slice_args(args, opts_grp))
+    opts = parse_opt_args(slice_args(args, opts_grp), BasicFlowOpts)
     logging.info(f"Running with opts {opts}")
     _main(ckt, opts)
