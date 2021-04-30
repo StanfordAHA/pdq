@@ -32,8 +32,8 @@ class StepWrapper:
             raise RuntimeError("Can not get flow of unbound step")
         return self._flow()
 
-    def run(self):
-        self._flow()._run_step(self)
+    def run(self, **kwargs):
+        self._flow()._run_step(self, **kwargs)
 
     def get_build_dir(self):
         return self._flow()._get_build_dir_of_step(self)
@@ -57,11 +57,15 @@ class FlowWrapperInterface(abc.ABC):
         name_to_number = {step.name: step.number for step in self.steps}
         return self.steps[name_to_number[name_or_number]]
 
-    def _run_step(self, step: StepWrapper):
+    def _run_step(self, step: StepWrapper, **kwargs):
         logging.info(f"Running step {step.name}")
-        # NOTE(rsetaluri): Since we pass shell=True, we need to pass the entire
-        # command as a single string.
-        self._run_build_cmd(f"make {step.name}", shell=True)
+        # By default, we want to use shell=True, so we need to adjust command.
+        opts = kwargs.copy()
+        shell = opts.setdefault("shell", True)
+        cmd = ["make", step.name]
+        if shell:
+            cmd = " ".join(cmd)
+        self._run_build_cmd(cmd, **opts)
 
     def _get_build_dir_of_step(self, step: StepWrapper) -> pathlib.Path:
         build_dir = pathlib.Path(self._get_build_dir())
