@@ -32,6 +32,7 @@ def construct():
     'adk'            : adk_name,
     'adk_view'       : adk_view,
     'topographical'  : True,
+    'explore'        : {{ explore }},
     'strip_path'     : f"{tb_name}/dut"
   }
 

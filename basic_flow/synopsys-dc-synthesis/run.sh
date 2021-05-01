@@ -11,8 +11,11 @@
 set -x
 
 # DC shell
-
-dc_exec='dc_shell-xg-t -64bit'
+if [ "$explore" == True ]; then
+  dc_exec='de_shell -64bit'
+else
+  dc_exec='dc_shell-xg-t -64bit'
+fi
 
 # Build directories
 

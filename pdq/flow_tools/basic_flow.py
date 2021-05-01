@@ -20,6 +20,7 @@ def basic_flow_build_dir():
 @dataclasses.dataclass(frozen=True)
 class BasicFlowOpts:
     clock_period: float = 2.0
+    explore: bool = False
     inline: bool = False
 
 
@@ -30,6 +31,7 @@ def make_basic_flow(ckt: m.DefineCircuitKind, opts: BasicFlowOpts):
         "design_name": ckt.name,
         "clock_period": opts.clock_period,
         "clock_net": clk_name,
+        "explore": opts.explore,
     }
     builder = TemplatedFlowBuilder()
     builder.set_flow_dir(_BASIC_FLOW_FLOW_DIR)
