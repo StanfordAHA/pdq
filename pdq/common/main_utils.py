@@ -119,6 +119,9 @@ def add_opt_arguments(
             kwargs["required"] = False
         else:
             kwargs["help"] = f"(default={default_value})"
+        if field.type is bool:
+            kwargs.update({"action": "store_true", "dest": field.name})
+            del kwargs["type"]
         grp.add_argument(f"--{field.name}", **kwargs)
     return grp
 
