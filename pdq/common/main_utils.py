@@ -104,6 +104,25 @@ def _try_get_default(field: dataclasses.Field) -> Tuple[bool, Any]:
     return False, None
 
 
+def _add_bool_field(grp, field: dataclasses.Field) -> None:
+    assert field.type is bool
+    has_default, default_value = _try_get_default(field)
+    if not has_default:
+        sub_grp = grp.add_mutually_exclusive_group(required=True)
+        sub_grp.add_argument(f"--{field.name}", action="store_true")
+        sub_grp.add_argument(f"--no-{field.name}", action="store_false")
+        return
+    if not isinstance(default_value, bool):
+        raise TypeError("Expected bool default value, got {default_value}")
+    if default_value:
+        action = "store_false"
+        name = f"--no-{field.name}"
+    else:
+        action = "store_true"
+        name = f"--{field.name}"
+    grp.add_argument(name, action=action, help=f"(default={not default_value})")
+
+
 def add_opt_arguments(
         parser: argparse.ArgumentParser, cls: type, name: Optional[str] = None):
     if not dataclasses.is_dataclass(cls) or not isinstance(cls, type):
@@ -113,15 +132,15 @@ def add_opt_arguments(
     grp = parser.add_argument_group(name)
     fields = dataclasses.fields(cls)
     for field in fields:
+        if field.type is bool:
+            _add_bool_field(grp, field)
+            continue
         kwargs = {"type": field.type}
         has_default, default_value = _try_get_default(field)
         if not has_default:
             kwargs["required"] = False
         else:
             kwargs["help"] = f"(default={default_value})"
-        if field.type is bool:
-            kwargs.update({"action": "store_true", "dest": field.name})
-            del kwargs["type"]
         grp.add_argument(f"--{field.name}", **kwargs)
     return grp
 
