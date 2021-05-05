@@ -27,3 +27,12 @@ with _pushd("garnet"):
     Garnet = gen.circuit()
 Interconnect = type(only(Garnet.instances))
 Tile_PE = type(only(find_instances_name_equals(Interconnect, "Tile_X00_Y00")))
+PE = type(only(find_instances_name_equals(Tile_PE, "PE_inst0")))
+CB_bit0 = type(only(find_instances_name_equals(Tile_PE, "CB_bit0")))
+CB_bit1 = type(only(find_instances_name_equals(Tile_PE, "CB_bit1")))
+CB_bit2 = type(only(find_instances_name_equals(Tile_PE, "CB_bit2")))
+CB_data0 = type(only(find_instances_name_equals(Tile_PE, "CB_data0")))
+CB_data1 = type(only(find_instances_name_equals(Tile_PE, "CB_data1")))
+CB_data1 = type(only(find_instances_name_equals(Tile_PE, "CB_data1")))
+SB_ID0_5TRACKS_B16_PE = type(
+    only(find_instances_name_equals(Tile_PE, "SB_ID0_5TRACKS_B16_PE")))
