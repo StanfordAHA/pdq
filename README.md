@@ -27,4 +27,4 @@ Assuming you have access to the necessary physical design tools, code can be run
 
 This will run the query flow on either the specified module or generator from `<design_package_name>`. `<design_package_name>` should be specified as a "dot" path rather than a file path. For example, to run on the `Adder` generator found in the file `magma_examples/magma_examples/adder.py`, we could run
 
-    python main.py magma_examples.magma_examples.adder --generator Adder --params n=16
+    python basic_flow_main.py --package magma_examples.magma_examples.adder --generator Adder --params n=16
