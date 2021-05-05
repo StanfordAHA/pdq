@@ -1,0 +1,1 @@
+-e magma_riscv_mini
