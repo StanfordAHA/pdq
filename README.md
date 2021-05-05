@@ -3,16 +3,20 @@
 Queryable physical design
 
 # Setup
-We recommend using a python virtual environment. The required python packages are listed in `requirements.txt`.
+We recommend using a python virtual environment. For the base project, the required python packages are listed in `requirements.txt`.
 
     python -m venv env
     # Use activate.csh if on tcsh.
     source env/bin/activate
     python -m pip install -r requirements.txt
-  
-The `magma_examples` and `garnet` repositories can be fetched locally for use in experimentation:
+
+To get more designs for experimentation, there are some included submodules, such as `garnet`. Use the `git submodule` command to fetch these:
 
     git submodule update --init --recursive
+
+Some submodules require their own requirements, contained in `<submodule>-requirements.txt`. E.g. for garnet related experiments:
+
+    python -m pip install -r garnet-requirements.txt
 
 # Running tests
 Tests can be run using pytest:
