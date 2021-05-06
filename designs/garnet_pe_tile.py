@@ -20,19 +20,13 @@ def _pushd(new_dir):
 
 
 with _pushd("garnet"):
-    with open("garnet.py") as f:
-        exec(f.read())
-        kwargs = dict(add_pd=False, interconnect_only=True, standalone=True)
-        gen = Garnet(1, 1, **kwargs)
-    Garnet = gen.circuit()
-Interconnect = type(only(Garnet.instances))
-Tile_PE = type(only(find_instances_name_equals(Interconnect, "Tile_X00_Y00")))
-PE = type(only(find_instances_name_equals(Tile_PE, "PE_inst0")))
-CB_bit0 = type(only(find_instances_name_equals(Tile_PE, "CB_bit0")))
-CB_bit1 = type(only(find_instances_name_equals(Tile_PE, "CB_bit1")))
-CB_bit2 = type(only(find_instances_name_equals(Tile_PE, "CB_bit2")))
-CB_data0 = type(only(find_instances_name_equals(Tile_PE, "CB_data0")))
-CB_data1 = type(only(find_instances_name_equals(Tile_PE, "CB_data1")))
-CB_data1 = type(only(find_instances_name_equals(Tile_PE, "CB_data1")))
-SB_ID0_5TRACKS_B16_PE = type(
-    only(find_instances_name_equals(Tile_PE, "SB_ID0_5TRACKS_B16_PE")))
+    with open("garnet.py") as _f:
+        exec(_f.read())
+        _kwargs = dict(add_pd=False, interconnect_only=True, standalone=True)
+        _gen = Garnet(1, 1, **_kwargs)
+    _Garnet = _gen.circuit()
+_Interconnect = type(only(_Garnet.instances))
+_Tile_PE = type(only(find_instances_name_equals(_Interconnect, "Tile_X00_Y00")))
+
+# Make component(s) public.
+Tile_PE = _Tile_PE
