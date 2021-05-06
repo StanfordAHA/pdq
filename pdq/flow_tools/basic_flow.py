@@ -10,11 +10,6 @@ from pdq.circuit_tools.generate_testbench import generate_testbench
 
 
 _BASIC_FLOW_FLOW_DIR = pathlib.Path("basic_flow")
-_BASIC_FLOW_BUILD_DIR = pathlib.Path("build")
-
-
-def basic_flow_build_dir():
-    return _BASIC_FLOW_BUILD_DIR
 
 
 @dataclasses.dataclass(frozen=True)
@@ -44,8 +39,8 @@ def make_basic_flow(ckt: m.DefineCircuitKind, opts: BasicFlowOpts):
     builder.add_template(
         FileTemplate(
             builder.get_relative("query.tcl.tpl"),
-            _BASIC_FLOW_BUILD_DIR / "query.tcl",
-            dict(from_pin="I0[8]", to_pin="*")))
+            builder.get_relative("synopsys-dc-query/scripts/query.tcl"),
+            {"from": "I0[8]", "to": "*"}))
     with tempfile.TemporaryDirectory() as directory:
         design_basename = f"{directory}/design"
         m.compile(

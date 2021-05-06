@@ -49,7 +49,7 @@ parameters:
     - designer-interface.tcl
     - setup-session.tcl
     - read-ddc.tcl
-    - reporting.tcl
+    - query.tcl
 
 #-------------------------------------------------------------------------
 # Assertions
