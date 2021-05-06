@@ -10,11 +10,6 @@ from pdq.circuit_tools.generate_testbench import generate_testbench
 
 
 _BASIC_FLOW_FLOW_DIR = pathlib.Path("basic_flow")
-_BASIC_FLOW_BUILD_DIR = pathlib.Path("build")
-
-
-def basic_flow_build_dir():
-    return _BASIC_FLOW_BUILD_DIR
 
 
 @dataclasses.dataclass(frozen=True)

@@ -6,8 +6,7 @@ from pdq.common.reporting import make_header
 from pdq.common.main_utils import (
     add_design_arguments, parse_design_args, slice_args, add_opt_arguments,
     parse_opt_args)
-from pdq.flow_tools.basic_flow import (
-    BasicFlowOpts, make_basic_flow, basic_flow_build_dir)
+from pdq.flow_tools.basic_flow import BasicFlowOpts, make_basic_flow
 from pdq.report_parsing.parsers import parse_dc_area
 from pdq.report_parsing.parsers import parse_dc_timing
 from pdq.report_parsing.parsers import parse_ptpx_power
@@ -16,7 +15,7 @@ from pdq.report_parsing.parsers import parse_ptpx_power
 def _main(ckt, opts):
     opts = BasicFlowOpts(**opts)
     flow = make_basic_flow(ckt, opts)
-    flow.build(basic_flow_build_dir())
+    flow.build(pathlib.Path("build/"))
 
     syn_step = flow.get_step("synopsys-dc-synthesis")
     syn_step.run()
