@@ -1,6 +1,7 @@
 import abc
 import dataclasses
 import logging
+import os
 import pathlib
 import subprocess
 import sys
@@ -84,6 +85,7 @@ class FlowWrapperInterface(abc.ABC):
 @dataclasses.dataclass
 class StagedFlowWrapper(FlowWrapperInterface):
     def build(self, build_dir: pathlib.Path):
+        os.mkdir(build_dir)
         self._set_build_dir(str(build_dir.resolve()))
         cmd = ["mflowgen", "run", "--design", str(self.design_dir.resolve())]
         self._run_build_cmd(cmd)
