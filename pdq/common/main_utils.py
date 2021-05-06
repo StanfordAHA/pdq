@@ -162,4 +162,4 @@ def parse_opt_args(args: argparse.Namespace, cls: type):
         has_default, _ = _try_get_default(field)
         if not has_default:
             raise RuntimeError(f"Missing opt '{field.name}'")
-    return opts
+    return cls(**opts)

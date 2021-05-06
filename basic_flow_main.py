@@ -12,9 +12,8 @@ from pdq.report_parsing.parsers import parse_dc_timing
 from pdq.report_parsing.parsers import parse_ptpx_power
 
 
-def _main(ckt, opts):
-    opts = BasicFlowOpts(**opts)
-    flow = make_basic_flow(ckt, opts)
+def _main(ckt, flow_opts: BasicFlowOpts):
+    flow = make_basic_flow(ckt, flow_opts)
     flow.build(pathlib.Path("build/"))
 
     syn_step = flow.get_step("synopsys-dc-synthesis")
@@ -60,9 +59,9 @@ def _main(ckt, opts):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     design_grp = add_design_arguments(parser)
-    opts_grp = add_opt_arguments(parser, BasicFlowOpts)
+    flow_opts_grp = add_opt_arguments(parser, BasicFlowOpts)
     args = parser.parse_args()
     ckt = parse_design_args(slice_args(args, design_grp))
-    opts = parse_opt_args(slice_args(args, opts_grp), BasicFlowOpts)
-    logging.info(f"Running with opts {opts}")
-    _main(ckt, opts)
+    flow_opts = parse_opt_args(slice_args(args, flow_opts_grp), BasicFlowOpts)
+    logging.info(f"Running with flow_opts {flow_opts}")
+    _main(ckt, flow_opts)
