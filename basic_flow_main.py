@@ -1,4 +1,5 @@
 import argparse
+import dataclasses
 import logging
 import pathlib
 
@@ -12,9 +13,14 @@ from pdq.report_parsing.parsers import parse_dc_timing
 from pdq.report_parsing.parsers import parse_ptpx_power
 
 
-def _main(ckt, flow_opts: BasicFlowOpts):
+@dataclasses.dataclass
+class _MainOpts:
+    build_dir: str = "build/"
+
+
+def _main(ckt, flow_opts: BasicFlowOpts, main_opts: _MainOpts):
     flow = make_basic_flow(ckt, flow_opts)
-    flow.build(pathlib.Path("build/"))
+    flow.build(pathlib.Path(main_opts.build_dir))
 
     syn_step = flow.get_step("synopsys-dc-synthesis")
     syn_step.run()
@@ -60,8 +66,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     design_grp = add_design_arguments(parser)
     flow_opts_grp = add_opt_arguments(parser, BasicFlowOpts)
+    main_opts_grp = add_opt_arguments(parser, _MainOpts)
     args = parser.parse_args()
     ckt = parse_design_args(slice_args(args, design_grp))
     flow_opts = parse_opt_args(slice_args(args, flow_opts_grp), BasicFlowOpts)
+    main_opts = parse_opt_args(slice_args(args, main_opts_grp), _MainOpts)
     logging.info(f"Running with flow_opts {flow_opts}")
-    _main(ckt, flow_opts)
+    logging.info(f"Running with main_opts {main_opts}")
+    _main(ckt, flow_opts, main_opts)
