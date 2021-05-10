@@ -17,6 +17,7 @@ class BasicFlowOpts:
     clock_period: float = 2.0
     explore: bool = False
     inline: bool = False
+    adk_name: str = 'freepdk-45nm'
 
 
 def make_basic_flow(ckt: m.DefineCircuitKind, opts: BasicFlowOpts):
@@ -27,6 +28,7 @@ def make_basic_flow(ckt: m.DefineCircuitKind, opts: BasicFlowOpts):
         "clock_period": opts.clock_period,
         "clock_net": clk_name,
         "explore": opts.explore,
+        "adk_name": opts.adk_name,
     }
     builder = TemplatedFlowBuilder()
     builder.set_flow_dir(_BASIC_FLOW_FLOW_DIR)

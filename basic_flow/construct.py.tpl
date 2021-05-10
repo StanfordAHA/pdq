@@ -14,7 +14,7 @@ def construct():
   # Parameters
   #-----------------------------------------------------------------------
 
-  adk_name = 'freepdk-45nm'
+  adk_name = '{{ adk_name }}'
   adk_view = 'view-standard'
   design_name = '{{ design_name }}'
   tb_name = f"{design_name}_tb"
