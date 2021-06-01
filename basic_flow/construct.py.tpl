@@ -64,10 +64,10 @@ def construct():
   ptpx_gl     = Step( 'synopsys-ptpx-gl',    default=True )
 
   # Add inputs/outputs for all macros
-  macro_files = []
-  macro_db = [f for f in macro_files if '.db' in file]
-  macro_lef = [f for f in macro_files if '.lef' in file]
-  macro_v = [f for f in macro_files if '.v' in file]
+  macro_files = {{ macro_files }}
+  macro_db = [f for f in macro_files if '.db' in f]
+  macro_lef = [f for f in macro_files if '.lef' in f]
+  macro_v = [f for f in macro_files if '.v' in f]
   macros.extend_outputs( macro_files )
   synth.extend_inputs( macro_db + macro_lef)
   synth_query.extend_inputs( macro_db + macro_lef)

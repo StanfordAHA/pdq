@@ -18,6 +18,12 @@ class BasicFlowOpts:
     explore: bool = False
     inline: bool = False
     adk_name: str = 'freepdk-45nm'
+    macros: str = ""
+
+
+def parse_macro_arg(macro_arg: str):
+    macro_list = [s.strip() for s in macro_arg.split(",")]
+    return macro_list
 
 
 def make_basic_flow(ckt: m.DefineCircuitKind, opts: BasicFlowOpts):
@@ -29,6 +35,7 @@ def make_basic_flow(ckt: m.DefineCircuitKind, opts: BasicFlowOpts):
         "clock_net": clk_name,
         "explore": opts.explore,
         "adk_name": opts.adk_name,
+        "macro_files": parse_macro_arg(opts.macros),
     }
     builder = TemplatedFlowBuilder()
     builder.set_flow_dir(_BASIC_FLOW_FLOW_DIR)
