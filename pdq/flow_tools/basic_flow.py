@@ -1,6 +1,7 @@
 import dataclasses
 import pathlib
 import tempfile
+import os
 
 import magma as m
 
@@ -21,12 +22,32 @@ class BasicFlowOpts:
     macros: str = ""
 
 
-def parse_macro_arg(macro_arg: str):
-    macro_list = [s.strip() for s in macro_arg.split(",")]
-    return macro_list
+# Takes in a path and gets all macro files present there
+def get_macro_files(path):
+    macro_file_list = []
+    # If it's a file, copy it and add it to the filename list
+    if os.path.isfile(path):
+        if path.lower().endswith(('.db', '.lef', '.v')):
+            #FileCopy(path, builder.get_relative("macros/outputs/"))
+            macro_file_list.append(path)
+    # If it's a directory, recursively search for macro files
+    elif os.path.isdir(path):
+        for f in os.listdir(path):
+            macro_file_list += get_macro_files(os.path.join(path, f))
+
+    return macro_file_list
+    
 
 
 def make_basic_flow(ckt: m.DefineCircuitKind, opts: BasicFlowOpts):
+    # First, parse the macro args and copy all the files to the macro node
+    macro_path_list = [s.strip() for s in opts.macros.split(",")]
+    macro_file_list = []
+    for path in macro_path_list:
+        macro_file_list += get_macro_files(path)
+
+    macro_file_basenames = [os.path.basename(f) for f in macro_file_list]
+                
     clk = m.get_default_clocks(ckt)[m.Clock]
     clk_name = clk if clk is None else f"'{clk.name.name}'"
     construct_opts = {
@@ -35,7 +56,7 @@ def make_basic_flow(ckt: m.DefineCircuitKind, opts: BasicFlowOpts):
         "clock_net": clk_name,
         "explore": opts.explore,
         "adk_name": opts.adk_name,
-        "macro_files": parse_macro_arg(opts.macros),
+        "macro_files": macro_file_basenames,
     }
     builder = TemplatedFlowBuilder()
     builder.set_flow_dir(_BASIC_FLOW_FLOW_DIR)
@@ -44,6 +65,14 @@ def make_basic_flow(ckt: m.DefineCircuitKind, opts: BasicFlowOpts):
             builder.get_relative("construct.py.tpl"),
             builder.get_relative("construct.py"),
             construct_opts))
+
+    # Copy all macro files to macro node
+    for path in macro_file_list:
+        builder.add_template(
+            FileCopy(
+                path,
+                builder.get_relative(f"macros/{os.path.basename(path)}")))
+
     # TODO(rsetaluri,alexcarsello): Make pins non-design specific.
     builder.add_template(
         FileTemplate(
