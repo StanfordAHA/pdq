@@ -38,11 +38,11 @@ def _get_macro_files(path):
 
 
 def make_basic_flow(ckt: m.DefineCircuitKind, opts: BasicFlowOpts):
-    # First, parse the macro args and copy all the files to the macro node
+    # First, parse the macro args and copy all the files to the macro node.
     macro_path_list = [s.strip() for s in opts.macros.split(",")]
     macro_file_list = []
     for path in macro_path_list:
-        macro_file_list += get_macro_files(path)
+        macro_file_list += _get_macro_files(path)
 
     macro_file_basenames = [os.path.basename(f) for f in macro_file_list]
                 
