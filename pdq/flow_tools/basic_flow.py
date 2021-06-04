@@ -22,21 +22,19 @@ class BasicFlowOpts:
     macros: str = ""
 
 
-# Takes in a path and gets all macro files present there
-def get_macro_files(path):
+def _get_macro_files(path):
+    """Takes in a path and gets all macro files present there."""
     macro_file_list = []
-    # If it's a file, copy it and add it to the filename list
+    # If it's a file, copy it and add it to the filename list.
     if os.path.isfile(path):
         if path.lower().endswith(('.db', '.lef', '.v')):
-            #FileCopy(path, builder.get_relative("macros/outputs/"))
             macro_file_list.append(path)
-    # If it's a directory, recursively search for macro files
+    # If it's a directory, recursively search for macro files.
     elif os.path.isdir(path):
         for f in os.listdir(path):
             macro_file_list += get_macro_files(os.path.join(path, f))
 
     return macro_file_list
-    
 
 
 def make_basic_flow(ckt: m.DefineCircuitKind, opts: BasicFlowOpts):
