@@ -50,6 +50,7 @@ def construct():
   # Custom steps
 
   rtl         = Step( this_dir + '/rtl' )
+  macros      = Step( this_dir + '/macros' )
   constraints = Step( this_dir + '/constraints' )
   synth       = Step( this_dir + '/synopsys-dc-synthesis' )
   synth_query = Step( this_dir + '/synopsys-dc-query' )
@@ -62,11 +63,23 @@ def construct():
   sim         = Step( 'synopsys-vcs-sim',               default=True )
   ptpx_gl     = Step( 'synopsys-ptpx-gl',    default=True )
 
+  # Add inputs/outputs for all macros
+  macro_files = {{ macro_files }}
+  macro_db = [f for f in macro_files if f.endswith('.db')]
+  macro_lef = [f for f in macro_files if f.endswith('.lef')]
+  macro_v = [f for f in macro_files if f.endswith('.v')]
+  macros.extend_outputs( macro_files )
+  synth.extend_inputs( macro_db + macro_lef)
+  synth_query.extend_inputs( macro_db + macro_lef)
+  sim.extend_inputs( macro_v )
+  ptpx_gl.extend_inputs( macro_db )
+
   #-----------------------------------------------------------------------
   # Graph -- Add nodes
   #-----------------------------------------------------------------------
 
   g.add_step( info           )
+  g.add_step( macros         )
   g.add_step( rtl            )
   g.add_step( constraints    )
   g.add_step( synth          )
@@ -89,6 +102,11 @@ def construct():
 
   g.connect_by_name( rtl,            synth             )
   g.connect_by_name( constraints,    synth             )
+
+  g.connect_by_name( macros,         synth             )
+  g.connect_by_name( macros,         synth_query       )
+  g.connect_by_name( macros,         sim               )
+  g.connect_by_name( macros,         ptpx_gl           )
 
   g.connect_by_name( synth,          synth_query       )
   g.connect_by_name( synth,          ptpx_gl           )
