@@ -32,7 +32,7 @@ def _get_macro_files(path):
     # If it's a directory, recursively search for macro files.
     elif os.path.isdir(path):
         for f in os.listdir(path):
-            macro_file_list += get_macro_files(os.path.join(path, f))
+            macro_file_list += _get_macro_files(os.path.join(path, f))
 
     return macro_file_list
 
