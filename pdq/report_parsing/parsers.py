@@ -26,9 +26,11 @@ def parse_dc_area(report_name):
 
     # Grab total area.
     line = lines[ind + 1]
-    name, area, _, _ = line.strip().split()
+    name, combo, flops, blackboxes = line.strip().split()
     assert name == "Total"
-    area_dict["TOTAL"] = area
+    area_dict["TOTAL_COMBO"] = combo
+    area_dict["TOTAL_FLOPS"] = flops
+    area_dict["TOTAL_BLACKBOXES"] = blackboxes
 
     return area_dict
 
