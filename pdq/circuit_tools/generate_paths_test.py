@@ -22,13 +22,16 @@ class _GeneratePathsTest:
                 v.throw()
         assert all(path.validate(self.ckt) for path in self.paths)
 
-    def get_instance(self, name):
+    def get_instance(self, name, ckt=None):
+        if ckt is None:
+            ckt = self.ckt
+        key = ckt, name
         try:
-            return self._instance_cache[name]
+            return self._instance_cache[key]
         except KeyError:
             pass
-        inst = only(find_instances_name_substring(self.ckt, name))
-        self._instance_cache[name] = inst
+        inst = only(find_instances_name_substring(ckt, name))
+        self._instance_cache[key] = inst
         return inst
 
     def pop_path(self, path):
@@ -53,6 +56,7 @@ def test_basic(generate_paths_test):
     # Grab the internal instances of SimpleAlu for checking the paths.
     units = (generate_paths_test.get_instance(name) for name in ("add", "sub"))
     mux = generate_paths_test.get_instance("Mux")
+    mux_prim = generate_paths_test.get_instance("mux", type(mux))
 
     # Check all the paths through the functional units (add, sub).
     for i, unit in enumerate(units):
@@ -67,7 +71,13 @@ def test_basic(generate_paths_test):
                         dst=bit),
                     InternalSignalPath(
                         src=mux_in[j],
-                        dst=mux.O[0])
+                        dst=mux.O[0],
+                        path=[
+                            InternalSignalPath(
+                                src=mux_prim.I.data[i][j],
+                                dst=mux_prim.O[0])
+                        ]
+                    )
                 ]
             )
             generate_paths_test.pop_path(path)
@@ -80,7 +90,13 @@ def test_basic(generate_paths_test):
             path=[
                 InternalSignalPath(
                     src=mux.I2[0],
-                    dst=mux.O[0])
+                    dst=mux.O[0],
+                    path=[
+                        InternalSignalPath(
+                            src=mux_prim.I.data[2][0],
+                            dst=mux_prim.O[0])
+                    ]
+                )
             ]
         ))
 
@@ -94,6 +110,7 @@ def test_thru(generate_paths_test):
     generate_paths_test.generate_paths(query)
 
     mux = generate_paths_test.get_instance("Mux")
+    mux_prim = generate_paths_test.get_instance("mux", type(mux))
 
     # Check the path through the add.
     for j, bit in enumerate(adder.O):
@@ -107,7 +124,13 @@ def test_thru(generate_paths_test):
                     dst=bit),
                 InternalSignalPath(
                     src=mux_in[j],
-                    dst=mux.O[0])
+                    dst=mux.O[0],
+                    path=[
+                        InternalSignalPath(
+                            src=mux_prim.I.data[0][j],
+                            dst=mux_prim.O[0])
+                    ]
+                )
             ]
         )
         generate_paths_test.pop_path(path)
