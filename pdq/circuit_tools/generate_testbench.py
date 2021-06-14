@@ -17,7 +17,7 @@ def _make_random(T):
 def _update_clock(ckt, kwargs):
     if "clock" in kwargs:
         return True
-    clk = m.get_default_clocks(ckt)[m.Clock]
+    clk = m.wire_clock.get_default_clocks(ckt)[m.Clock]
     if clk is None:
         return False
     kwargs["clock"] = clk
