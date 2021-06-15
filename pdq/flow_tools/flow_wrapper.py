@@ -3,6 +3,7 @@ import dataclasses
 import logging
 import os
 import pathlib
+import shutil
 import subprocess
 import sys
 from typing import List, Union
@@ -88,7 +89,7 @@ class StagedFlowWrapper(FlowWrapperInterface):
         try:
             os.mkdir(build_dir)
         except FileExistsError:
-            os.rmdir(build_dir)
+            shutil.rmtree(build_dir)
             os.mkdir(build_dir)
         self._set_build_dir(str(build_dir.resolve()))
         cmd = ["mflowgen", "run", "--design", str(self.design_dir.resolve())]
