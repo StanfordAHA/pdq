@@ -16,6 +16,7 @@ from pdq.report_parsing.parsers import parse_ptpx_power
 @dataclasses.dataclass
 class _MainOpts:
     build_dir: str = "build/"
+    skip_power: bool = False
 
 
 def _main(ckt, flow_opts: BasicFlowOpts, main_opts: _MainOpts):
@@ -50,16 +51,17 @@ def _main(ckt, flow_opts: BasicFlowOpts, main_opts: _MainOpts):
             print (f"{k1} -> {k2}: {v}")
     print (make_header("", pad=False))
 
-    power_step = flow.get_step("synopsys-ptpx-gl")
-    power_step.run()
-    power_report = parse_ptpx_power(
-        power_step.get_report(f"{ckt.name}.power.hier.rpt"))
-    print (make_header("POWER REPORT"))
-    for k1, d in power_report.items():
-        print(f"{k1}:")
-        for k2, v in d.items():
-            print (f"  {k2}: {v}")
-    print (make_header("", pad=False))
+    if not main_opts.skip_power:
+        power_step = flow.get_step("synopsys-ptpx-gl")
+        power_step.run()
+        power_report = parse_ptpx_power(
+            power_step.get_report(f"{ckt.name}.power.hier.rpt"))
+        print (make_header("POWER REPORT"))
+        for k1, d in power_report.items():
+            print(f"{k1}:")
+            for k2, v in d.items():
+                print (f"  {k2}: {v}")
+        print (make_header("", pad=False))
 
 
 if __name__ == "__main__":

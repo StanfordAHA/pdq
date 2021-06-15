@@ -118,7 +118,11 @@ def _add_bool_field(grp, field: dataclasses.Field) -> None:
     else:
         action = "store_true"
         name = f"--{field.name}"
-    grp.add_argument(name, action=action, help=f"(default={not default_value})")
+    grp.add_argument(
+        name,
+        action=action,
+        dest=field.name,
+        help=f"(default {field.name}={default_value})")
 
 
 def add_opt_arguments(
