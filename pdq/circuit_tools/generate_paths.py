@@ -1,4 +1,5 @@
 import dataclasses
+import random
 from typing import List, Optional, Set, Tuple
 
 import magma as m
@@ -139,3 +140,11 @@ def generate_paths(
     if query.thru:
         paths = filter(lambda p: _path_is_thru(p, query.thru), paths)
     return list(paths)
+
+
+def generate_random_path(ckt: m.DefineCircuitKind) -> TopSignalPath:
+    it = _BackwardsPathTracer(ckt)
+    outputs = sum(map(list, map(m.as_bits, ckt.interface.inputs())), [])
+    dst = random.choice(outputs)
+    paths = it.run(dst)
+    return random.choice(paths)

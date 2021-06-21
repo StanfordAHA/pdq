@@ -2,7 +2,8 @@ import pytest
 
 from designs.simple_alu import SimpleAlu
 from pdq.circuit_tools.circuit_utils import find_instances_name_substring
-from pdq.circuit_tools.generate_paths import SignalPathQuery, generate_paths
+from pdq.circuit_tools.generate_paths import (
+    SignalPathQuery, generate_paths, generate_random_path)
 from pdq.circuit_tools.signal_path import (
     TopSignalPath, InternalSignalPath, paths_equal)
 from pdq.common.algorithms import only
@@ -135,3 +136,10 @@ def test_thru(generate_paths_test):
 
     # Check that we've found all the paths.
     assert len(generate_paths_test.paths) == 0
+
+
+def test_random_path():
+    path = generate_random_path(SimpleAlu)
+    v = path.validate(SimpleAlu)
+    if not v:
+        v.throw()
