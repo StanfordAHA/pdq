@@ -3,6 +3,7 @@ from typing import List, Optional, Set, Tuple
 
 import magma as m
 
+from pdq.circuit_tools.circuit_primitives import get_primitive_drivers
 from pdq.circuit_tools.circuit_utils import (
     DefnSelector, InstSelector, find_defn_ref, find_inst_ref)
 from pdq.circuit_tools.signal_path import (
@@ -49,11 +50,8 @@ class _BackwardsPathTracer:
 
     def run(self, bit: m.Bit):
         if not self._descend(self._ckt):
-            paths = []
-            for port in self._ckt.interface.outputs():
-                for src in m.as_bits(port):
-                    paths.append(TopSignalPath(src, bit))
-            return paths
+            srcs = get_primitive_drivers(bit, allow_default=False)
+            return [TopSignalPath(src, bit) for src in srcs]
         dst = bit
         data = {}
         work = [bit]
