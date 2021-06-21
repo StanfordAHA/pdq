@@ -2,6 +2,7 @@ import magma as m
 from magma.primitives.mux import CoreIRCommonLibMuxN
 
 from pdq.circuit_tools.circuit_utils import find_defn_ref
+from pdq.common.algorithms import first
 
 
 def _get_mux_drivers(ckt, name, sel):
@@ -12,16 +13,31 @@ def _get_mux_drivers(ckt, name, sel):
     return [ckt.I.data[i][sel.index] for i in range(N)] + list(ckt.I.sel)
 
 
+def _is_binop(ckt):
+    return ckt.coreir_lib == "coreir" and ckt.coreir_name in ("add", "sub")
+
+
+def _get_binop_drivers(ckt, name, sel):
+    assert name == "out"
+    assert isinstance(sel, m.value_utils.ArraySelector)
+    assert sel.child is None
+    return [ckt.I0[sel.index], ckt.I1[sel.index]]
+
+
 class _PrimitiveDriversDatabase:
     def __init__(self):
-        self._generators = {}
         self._circuits = {}
+        self._generators = {}
+        self._properties = []
+
+    def add_circuit(self, ckt, getter):
+        self._circuits[ckt] = getter
 
     def add_generator(self, generator, getter):
         self._generators[generator] = getter
 
-    def add_circuit(self, ckt, getter):
-        self._circuits[ckt] = getter
+    def add_property(self, property_, getter):
+        self._properties.append((property_, getter))
 
     def get(self, ckt, name, sel, allow_default):
         try:
@@ -38,6 +54,12 @@ class _PrimitiveDriversDatabase:
                 pass
             else:
                 return getter(ckt, name, sel)
+        try:
+            _, getter = first(filter(lambda p: p[0](ckt), self._properties))
+        except ValueError:
+            pass
+        else:
+            return getter(ckt, name, sel)
         if not allow_default:
             raise KeyError(f"No entry found for {ckt}")
         # TODO(rsetaluri): Implement default behavior.
@@ -46,6 +68,7 @@ class _PrimitiveDriversDatabase:
 
 _primitive_drivers_database = _PrimitiveDriversDatabase()
 _primitive_drivers_database.add_generator(CoreIRCommonLibMuxN, _get_mux_drivers)
+_primitive_drivers_database.add_property(_is_binop, _get_binop_drivers)
 
 
 def get_primitive_drivers(bit: m.Bit, allow_default: bool = True):
