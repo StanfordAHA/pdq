@@ -42,7 +42,10 @@ def find_ref(
         return ref
     if ref is None:
         return None
-    return find_ref(ref.parent(), condition)
+    parent = ref.parent()
+    if parent is ref:
+        return None
+    return find_ref(parent, condition)
 
 
 def find_inst_ref(value: m.Type):

@@ -63,6 +63,10 @@ class _BackwardsPathTracer:
             ref = find_inst_ref(driver)
             if ref is None:  # defn ref
                 ref = find_defn_ref(driver)
+                if ref is None:
+                    assert driver.const()
+                    data[bit] = driver
+                    continue
                 assert ref is not None
                 data[bit] = driver
                 continue
@@ -85,6 +89,8 @@ class _BackwardsPathTracer:
         def _assemble(bit, curr):
             paths = data[bit]
             if isinstance(paths, m.Type):
+                if paths.const():
+                    return
                 out.append(TopSignalPath(paths, dst, curr))
                 return
             for path in paths:
