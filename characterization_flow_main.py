@@ -50,11 +50,6 @@ def _main(ckt, flow_opts: BasicFlowOpts, main_opts: _MainOpts):
         for row in period_area_list:
             csv_out.writerow(row)
 
-     
-        
-        
-
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
