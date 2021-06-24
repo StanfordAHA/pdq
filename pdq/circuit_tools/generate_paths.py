@@ -58,7 +58,16 @@ class _BackwardsPathTracer:
         work = [bit]
         while work:
             bit = work.pop()
+            if bit in data:  # skip bits we've already seen
+                continue
             driver = bit.value()
+            # NOTE(rsetaluri): This is somewhat of a hack to support undriven
+            # wires. We mock driving them with a constant so they get excluded
+            # anyway. This is probably ok since unwired ports are usually clock
+            # types which will be wired up later. Therefore, they are not
+            # interesting data timing paths.
+            if driver is None:  # hack!
+                driver = m.GND
             assert driver is not None
             ref = find_inst_ref(driver)
             if ref is None:  # defn ref
@@ -82,7 +91,8 @@ class _BackwardsPathTracer:
                     path.path),
                 paths))
             data[bit] = paths
-            work += list(set(path.src for path in paths))
+            # NOTE(rsetaluri): Dict keys are used to mimic an ordered set.
+            work += list({path.src: None for path in paths})
 
         out = []
 
@@ -150,7 +160,13 @@ def generate_paths(
 
 def generate_random_path(ckt: m.DefineCircuitKind) -> TopSignalPath:
     it = _BackwardsPathTracer(ckt)
-    outputs = sum(map(list, map(m.as_bits, ckt.interface.inputs())), [])
-    dst = random.choice(outputs)
-    paths = it.run(dst)
-    return random.choice(paths)
+    outputs = sum(map(list, map(m.as_bits, ckt.interface.ports.values())), [])
+    outputs = list(filter(lambda b: b.is_input(), outputs))
+    while outputs:
+        idx = random.randrange(0, len(outputs))
+        dst = outputs.pop(idx)
+        paths = it.run(dst)
+        if not paths:
+            continue
+        return random.choice(paths)
+    raise RuntimeError("No valid path found")
