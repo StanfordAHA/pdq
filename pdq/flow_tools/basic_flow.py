@@ -13,7 +13,7 @@ from pdq.circuit_tools.generate_testbench import generate_testbench
 _BASIC_FLOW_FLOW_DIR = pathlib.Path("basic_flow")
 
 
-@dataclasses.dataclass(frozen=True)
+@dataclasses.dataclass(frozen=False)
 class BasicFlowOpts:
     clock_period: float = 2.0
     explore: bool = False
