@@ -3,7 +3,7 @@ import random
 
 import magma as m
 
-from pdq.circuit_tools.circuit_primitives import *
+from pdq.circuit_tools.circuit_primitives import get_primitive_drivers
 from pdq.common.algorithms import only
 
 
@@ -22,3 +22,13 @@ def test_mux(T, height):
     expected += list(Mux.I.sel)
     got = get_primitive_drivers(Mux.O[index])
     _check_unordered_set_identical(expected, got)
+
+
+def test_bit_binop():
+
+    class _Foo(m.Circuit):  # needed to instance a circuit
+        m.Bit() | m.Bit()
+
+    Or = type(only(_Foo.instances))
+    got = get_primitive_drivers(Or.O)
+    print (got)

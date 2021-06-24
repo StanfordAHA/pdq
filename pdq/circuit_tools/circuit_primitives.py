@@ -1,27 +1,77 @@
+import functools
+import operator
+
 import magma as m
 from magma.primitives.mux import CoreIRCommonLibMuxN
+from magma.primitives.register import _CoreIRRegister
 
+from pdq.circuit_tools.circuit_primitives_utils import binop_to_unop, test_op
 from pdq.circuit_tools.circuit_utils import find_defn_ref
 from pdq.common.algorithms import first
 
 
+################################################################################
+# Mux primitives
+################################################################################
 def _get_mux_drivers(ckt, name, sel):
     assert name == "out"
     assert isinstance(sel, m.value_utils.ArraySelector)
     assert sel.child is None
     N = ckt.coreir_genargs["N"]
     return [ckt.I.data[i][sel.index] for i in range(N)] + list(ckt.I.sel)
+################################################################################
 
 
-def _is_binop(ckt):
-    return ckt.coreir_lib == "coreir" and ckt.coreir_name in ("add", "sub")
-
-
-def _get_binop_drivers(ckt, name, sel):
+################################################################################
+# Register primitives
+################################################################################
+def _get_register_drivers(ckt, name, sel):
     assert name == "out"
     assert isinstance(sel, m.value_utils.ArraySelector)
     assert sel.child is None
-    return [ckt.I0[sel.index], ckt.I1[sel.index]]
+    return [ckt.I[sel.index]]
+################################################################################
+
+
+################################################################################
+# CoreIR op primitives
+################################################################################
+def _is_coreir_op(ckt):
+    return ckt.coreir_lib == "corebit" or ckt.coreir_lib == "coreir"
+
+
+def _get_coreir_op_drivers(ckt, name, sel):
+    assert name == "out"
+    op_name = ckt.coreir_name
+    if ckt.coreir_lib == "corebit":
+        assert type(sel) is m.value_utils.Selector
+        assert sel.child is None
+        if op_name == "not":
+            return [ckt.I]
+        return [ckt.I0, ckt.I1]
+    assert ckt.coreir_lib == "coreir"
+    if isinstance(sel, m.value_utils.ArraySelector):
+        assert sel.child is None
+        N = len(ckt.O)
+        n = sel.index
+    else:  # cmp op
+        assert type(sel) is m.value_utils.Selector
+        assert isinstance(ckt.O, m.Bit)
+        N = 1
+        n = 0
+    if op_name == "orr":
+        op = lambda x: functools.reduce(operator.or_, x)
+    else:
+        op = getattr(operator, m.primitive_to_python(op_name))
+    if op_name in ("not", "neg", "orr"):
+        inputs = list(ckt.I)
+    else:
+        inputs = list(m.concat(ckt.I0, ckt.I1))
+        op = binop_to_unop(op)
+    M = len(inputs)
+    tests = (test_op(op, M, N, m, n) for m in range(M))
+    return [inputs[i] for i, t in enumerate(tests) if t]
+################################################################################
 
 
 class _PrimitiveDriversDatabase:
@@ -67,8 +117,12 @@ class _PrimitiveDriversDatabase:
 
 
 _primitive_drivers_database = _PrimitiveDriversDatabase()
+
+
 _primitive_drivers_database.add_generator(CoreIRCommonLibMuxN, _get_mux_drivers)
-_primitive_drivers_database.add_property(_is_binop, _get_binop_drivers)
+_primitive_drivers_database.add_generator(
+    _CoreIRRegister, _get_register_drivers)
+_primitive_drivers_database.add_property(_is_coreir_op, _get_coreir_op_drivers)
 
 
 def get_primitive_drivers(bit: m.Bit, allow_default: bool = True):
