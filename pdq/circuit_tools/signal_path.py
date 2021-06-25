@@ -28,7 +28,8 @@ class InternalSignalPath(SignalPath):
     dst: m.Out(m.Bit)
     path: Optional[List['InternalSignalPath']] = None
 
-    def _validate_impl(self, ckt: m.DefineCircuitKind, curr: m.Bit) -> m.Bit:
+    def _validate_impl(
+            self, ckt: m.DefineCircuitKind, curr: Optional[m.Bit]) -> m.Bit:
         assert isinstance(self.src, m.In(m.Bit))
         assert isinstance(self.dst, m.Out(m.Bit))
         inst = None
@@ -37,7 +38,8 @@ class InternalSignalPath(SignalPath):
             assert ref is not None and ref.inst in ckt.instances
             assert inst is None or inst is ref.inst
             inst = ref.inst
-        assert self.src.trace() is curr
+        if curr is not None:
+            assert self.src.trace() is curr
         if self.path is None:
             return self.dst
         selector = make_port_selector(self.src).child
@@ -51,7 +53,7 @@ class InternalSignalPath(SignalPath):
 
     @validator
     def validate(self, ckt: m.DefineCircuitKind) -> None:
-        self._validate_impl(ckt, self.src)
+        self._validate_impl(ckt, None)
 
 
 @dataclasses.dataclass(frozen=True, eq=False)
