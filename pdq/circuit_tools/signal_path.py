@@ -21,6 +21,44 @@ class SignalPath(abc.ABC):
             f"method instead")
 
 
+class Scope(abc.ABC):
+    def leaf(self):
+        if self.child is None:
+            return self
+        return self.child.leaf()
+
+    @validator
+    def _validate_child(self, defn):
+        if self.child is None:
+            return
+        self.child.validate(defn)
+
+
+@dataclasses.dataclass(frozen=True, eq=False)
+class ChildScope(Scope):
+    inst: m.Circuit
+    child: Optional['ChildScope'] = None
+
+    @validator
+    def validate(self, defn):
+        assert self.inst in defn.instances
+        self._validate_child(type(self.inst))
+
+
+@dataclasses.dataclass(frozen=True, eq=False)
+class RootScope(Scope):
+    defn: m.DefineCircuitKind
+    child: Optional[ChildScope] = None
+
+    @validator
+    def validate(self):
+        self._validate_child(self.defn)
+
+
+class ImplicitScope:
+    pass
+
+
 @dataclasses.dataclass(frozen=True, eq=False)
 class InternalSignalPath(SignalPath):
     """Represents a path between instances"""

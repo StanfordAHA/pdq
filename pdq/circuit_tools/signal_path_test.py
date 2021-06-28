@@ -3,7 +3,7 @@ import magma as m
 from pdq.circuit_tools.circuit_utils import (
     find_instances_name_substring, find_instances_type)
 from pdq.circuit_tools.signal_path import (
-    InternalSignalPath, TopSignalPath)
+    ChildScope, RootScope, InternalSignalPath, TopSignalPath)
 from pdq.common.algorithms import only
 
 
@@ -27,6 +27,13 @@ class _Top(m.Circuit):
     out = _Accum()(io.I0)
     out |= (io.I0 & io.I1)
     io.O @= out
+
+
+def test_scope():
+    accum = only(find_instances_type(_Top, lambda t: t is _Accum))
+    add = only(find_instances_name_substring(_Accum, "add"))
+    scope = RootScope(_Top, ChildScope(accum, ChildScope(add)))
+    assert scope.validate()
 
 
 def test_internal_signal_path():
