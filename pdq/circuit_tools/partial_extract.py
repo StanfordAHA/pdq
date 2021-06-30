@@ -7,7 +7,12 @@ import magma as m
 from pdq.common.algorithms import only
 from pdq.circuit_tools.circuit_utils import (
     DefnSelector, make_port_selector, find_inst_ref)
-from pdq.circuit_tools.signal_path import TopSignalPath, InternalSignalPath
+from pdq.circuit_tools.signal_path import (
+    SignalPath, TopSignalPath, InternalSignalPath)
+
+
+_SRC_PIN_NAME = "partial_src_pin__"
+_DST_PIN_NAME = "partial_dst_pin__"
 
 
 def _retarget_selector(selector, *keys):
@@ -40,20 +45,29 @@ def _partial_extract_internal(
                 selector, DefnSelector(None, new_port_name)))
 
 
-def partial_extract(ckt: m.DefineCircuitKind, path: TopSignalPath):
-    SRC_PIN_NAME = "partial_src_pin__"
-    DST_PIN_NAME = "partial_dst_pin__"
+def _initialize_extraction(path, state):
+    if isinstance(path, TopSignalPath):
+        state.ports[_SRC_PIN_NAME] = type(path.src).flip()
+        state.ports[_DST_PIN_NAME] = type(path.dst).flip()
+        return path.path
+    if isinstance(path, InternalSignalPath):
+        state.ports[_SRC_PIN_NAME] = type(path.src)
+        state.ports[_DST_PIN_NAME] = type(path.dst)
+        return [path]
+    raise NotImplementedError()
+
+
+def partial_extract(ckt: m.DefineCircuitKind, path: SignalPath):
     valid = path.validate(ckt)
     if not valid:
         valid.throw()
     state = SimpleNamespace(ports={}, instances={}, connections=[], curr=None)
-    state.ports[SRC_PIN_NAME] = type(path.src).flip()
-    state.ports[DST_PIN_NAME] = type(path.dst).flip()
-    state.curr = DefnSelector(None, SRC_PIN_NAME)
-    if path.path is not None:
-        for sub_path in path.path:
+    sub_paths = _initialize_extraction(path, state)
+    state.curr = DefnSelector(None, _SRC_PIN_NAME)
+    if sub_paths:
+        for sub_path in sub_paths:
             _partial_extract_internal(sub_path, [], state)
-    state.connections.append((state.curr, DefnSelector(None, DST_PIN_NAME)))
+    state.connections.append((state.curr, DefnSelector(None, _DST_PIN_NAME)))
 
     partial_ckt_name = f"Partial_{ckt.name}"
 

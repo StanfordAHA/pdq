@@ -136,3 +136,20 @@ def test_hierarchical():
     assert insts[2].I.trace() is insts[1].O[0]
     assert insts[3].I[0].trace() is insts[2].O
     assert Partial.partial_dst_pin__.trace() is insts[3].O[0]
+
+
+def test_internal():
+    add = only(find_instances_name_substring(SimpleAlu, "add"))
+
+    path = InternalSignalPath(src=add.I0[0], dst=add.O[0])
+    Partial = partial_extract(SimpleAlu, path)
+
+    # Check partial circuit.
+    assert len(Partial.instances) == 1
+    new_add = only(find_instances_name_substring(Partial, "add"))
+    assert new_add.name == add.name
+    assert type(new_add) is type(add)
+
+    # Check the connections along the desired timing path.
+    assert new_add.I0[0].trace() is Partial.partial_src_pin__
+    assert Partial.partial_dst_pin__.trace() is new_add.O[0]
