@@ -17,16 +17,16 @@ import csv
 @dataclasses.dataclass
 class _MainOpts:
     build_dir: str = "build/"
-    clock_period_start: float = 10.0
-    step: float = 1.0
+    freq_start: int = 100
+    step: int = 50
 
 
 def _main(ckt, flow_opts: BasicFlowOpts, main_opts: _MainOpts):
     met_timing = True
-    clock_period = main_opts.clock_period_start
+    freq = main_opts.freq_start
     period_area_list = []
-    while met_timing and clock_period > 0:
-        flow_opts.clock_period = clock_period 
+    while met_timing:
+        flow_opts.clock_period = (1.0 / freq) * 1000
         flow = make_basic_flow(ckt, flow_opts)
         flow.build(pathlib.Path(main_opts.build_dir))
 
@@ -36,17 +36,18 @@ def _main(ckt, flow_opts: BasicFlowOpts, main_opts: _MainOpts):
         area_report = parse_dc_area(
             syn_step.get_report(f"{ckt.name}.mapped.area.rpt"))
        
-        # Did we meet timing at this clock period? 
+        # Did we meet timing at this clock frequency? 
         if "VIOLATED" in open(syn_step.get_report(f"{ckt.name}.mapped.timing.setup.rpt")).read():
             met_timing = False
         else:
             area = area_report[ckt.name]
-            period_area_list.append((clock_period, area))
-            clock_period -= main_opts.step
+            period_area_list.append((flow_opts.clock_period, area))
+            # Update clock frequency
+            freq += main_opts.step
 
     with open(f"{ckt.name}_char.csv",'w') as out:
         csv_out = csv.writer(out, lineterminator='\n')
-        csv_out.writerow(('period','area'))
+        csv_out.writerow(('clock period (ns)','area'))
         for row in period_area_list:
             csv_out.writerow(row)
 
