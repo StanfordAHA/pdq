@@ -2,8 +2,7 @@ import magma as m
 
 from pdq.circuit_tools.circuit_utils import (
     find_instances_name_substring, find_instances_type)
-from pdq.circuit_tools.signal_path import (
-    ChildScope, RootScope, InternalSignalPath, TopSignalPath)
+from pdq.circuit_tools.signal_path import Scope, ScopedBit, BitSignalPath
 from pdq.common.algorithms import only
 
 
@@ -32,25 +31,40 @@ class _Top(m.Circuit):
 def test_scope():
     accum = only(find_instances_type(_Top, lambda t: t is _Accum))
     add = only(find_instances_name_substring(_Accum, "add"))
-    scope = RootScope(_Top, ChildScope(accum, ChildScope(add)))
+    scope = Scope(_Top, [accum, add])
     assert scope.validate()
 
 
 def test_internal_signal_path():
     # Validate internal path through and.
     and_inst = only(find_instances_name_substring(_Top, "and"))
-    path = InternalSignalPath(
-        src=and_inst.I0[0],
-        dst=and_inst.O[0]
-    )
-    path.validate(_Top).throw()
+    scope = Scope(_Top)
+    assert scope.validate()
+    path = BitSignalPath([
+        ScopedBit(and_inst.I0[0], scope),
+        ScopedBit(and_inst.O[0], scope),
+    ])
+    assert path.validate()
     # Validate internal path through or.
     or_inst = only(find_instances_name_substring(_Top, "or"))
-    path = InternalSignalPath(
-        src=or_inst.I1[0],
-        dst=or_inst.O[0]
-    )
-    path.validate(_Top).throw()
+    path = BitSignalPath([
+        ScopedBit(or_inst.I1[0], scope),
+        ScopedBit(or_inst.O[0], scope),
+    ])
+    assert path.validate()
+
+
+def test_internal_signal_path_nested():
+    # Validate internal path through adder in _Accum.
+    accum_inst = only(find_instances_type(_Top, lambda t: t is _Accum))
+    add_inst = only(find_instances_name_substring(_Accum, "add"))
+    scope = Scope(_Top, [accum_inst])
+    assert scope.validate()
+    path = BitSignalPath([
+        ScopedBit(add_inst.I0[0], scope),
+        ScopedBit(add_inst.O[0], scope),
+    ])
+    assert path.validate()
 
 
 def test_top_signal_path():
@@ -58,18 +72,14 @@ def test_top_signal_path():
     #   I0[0] -> and.I0[0] -> and.O[0] -> or.I1[0] -> or.O[0] -> O[0]
     and_inst = only(find_instances_name_substring(_Top, "and"))
     or_inst = only(find_instances_name_substring(_Top, "or"))
-    path = TopSignalPath(
-        src=_Top.I0[0],
-        dst=_Top.O[0],
-        path=[
-            InternalSignalPath(
-                src=and_inst.I0[0],
-                dst=and_inst.O[0]
-            ),
-            InternalSignalPath(
-                src=or_inst.I1[0],
-                dst=or_inst.O[0]
-            )
-        ]
-    )
-    path.validate(_Top).throw()
+    scope = Scope(_Top)
+    assert scope.validate()
+    path = BitSignalPath([
+        ScopedBit(_Top.I0[0], scope),
+        ScopedBit(and_inst.I0[0], scope),
+        ScopedBit(and_inst.O[0], scope),
+        ScopedBit(or_inst.I1[0], scope),
+        ScopedBit(or_inst.O[0], scope),
+        ScopedBit(_Top.O[0], scope)
+    ])
+    path.validate().throw()
