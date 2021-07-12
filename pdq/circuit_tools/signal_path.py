@@ -1,7 +1,7 @@
 import abc
 import dataclasses
 import functools
-from typing import List, Iterable, Optional, Union
+from typing import Iterable, List, Optional, Tuple, Union
 
 import magma as m
 
@@ -21,6 +21,10 @@ class ScopeInterface(abc.ABC):
 
     @abc.abstractmethod
     def leaf(self) -> Union[m.DefineCircuitKind, m.Circuit]:
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def pop(self) -> Tuple['Scope', m.Circuit]:
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -48,10 +52,10 @@ class ScopeInterface(abc.ABC):
         return type(leaf)
 
 
-@dataclasses.dataclass(frozen=True, eq=False)
+@dataclasses.dataclass(frozen=True)
 class Scope(ScopeInterface):
     top: m.DefineCircuitKind
-    path: List[m.Circuit] = dataclasses.field(default_factory=list)
+    path: Tuple[m.Circuit] = dataclasses.field(default_factory=tuple)
 
     def root(self) -> m.DefineCircuitKind:
         return self.top
@@ -64,10 +68,17 @@ class Scope(ScopeInterface):
             return self.top
         return self.path[-1]
 
+    def pop(self) -> Tuple['Scope', m.Circuit]:
+        if self.is_root():
+            raise RuntimeError()
+        path = list(self.path)
+        leaf = path.pop()
+        return Scope(self.top, tuple(path)), leaf
+
     def extend(self, leaf: m.Circuit) -> 'Scope':
-        path = self.path.copy()
+        path = list(self.path)
         path.append(leaf)
-        return Scope(self.top, path)
+        return Scope(self.top, tuple(path))
 
     def __eq__(self, other: 'Scope') -> bool:
         if not isinstance(other, Scope):
@@ -96,7 +107,7 @@ class Scope(ScopeInterface):
             curr = type(inst)
 
 
-@dataclasses.dataclass(frozen=True, eq=False)
+@dataclasses.dataclass(frozen=True)
 class ScopedValue:
     value: m.Type
     scope: ScopeInterface
@@ -155,7 +166,7 @@ class ScopedValue:
         return f"{str(self.scope)}.{str(self.value)}"
 
 
-@dataclasses.dataclass(frozen=True, eq=False)
+@dataclasses.dataclass(frozen=True)
 class ScopedBit(ScopedValue):
     value: m.Bit
     scope: ScopeInterface
@@ -227,7 +238,7 @@ def _is_driver(driver: ScopedBit, drivee: ScopedBit) -> bool:
     raise NotImplementedError(driver, drivee)
 
 
-@dataclasses.dataclass(frozen=True, eq=False)
+@dataclasses.dataclass(frozen=True)
 class BitSignalPath(SignalPathInterface):
     nodes: List[ScopedBit]
 
