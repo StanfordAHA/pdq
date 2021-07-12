@@ -1,7 +1,7 @@
 import abc
 import dataclasses
 import functools
-from typing import List, Iterable, Union
+from typing import List, Iterable, Optional, Union
 
 import magma as m
 
@@ -101,6 +101,46 @@ class ScopedValue:
     value: m.Type
     scope: ScopeInterface
 
+    @property
+    def ref(self) -> Optional[Union[m.InstRef, m.DefnRef]]:
+        try:
+            return self._ref
+        except AttributeError:
+            pass
+        inst = None
+        defn = None
+        ref = find_inst_ref(self.value)
+        if ref is not None:
+            inst = ref.inst
+        else:
+            ref = find_defn_ref(self.value)
+            if ref is not None:
+                defn = ref.defn
+        # NOTE(rsetaluri): Using object.__setattr__ is technically unsafe on
+        # frozen dataclasses, but we know this is just caching logic.
+        object.__setattr__(self, "_ref", ref)
+        object.__setattr__(self, "_inst", inst)
+        object.__setattr__(self, "_defn", defn)
+        return ref
+
+    @property
+    def defn(self) -> Optional[m.DefineCircuitKind]:
+        try:
+            return self._defn
+        except AttributeError:
+            pass
+        ref = self.ref  # performs logic in ref() above
+        return self._defn
+
+    @property
+    def inst(self) -> Optional[m.Circuit]:
+        try:
+            return self._inst
+        except AttributeError:
+            pass
+        ref = self.ref  # performs logic in ref() above
+        return self._inst
+
     def __eq__(self, other: 'ScopedValue') -> bool:
         if not isinstance(other, ScopedValue):
             return NotImplemented
@@ -199,14 +239,12 @@ class BitSignalPath(SignalPathInterface):
         prev = None
         for curr in self:
             curr.scope.validate()
-            ref = find_defn_ref(curr.value)
-            if ref is not None:  # top-level
+            if curr.defn is not None:  # top-level
                 assert curr.scope.is_root()
-                assert curr.scope.root() is ref.defn
+                assert curr.scope.root() is curr.defn
             else:
-                ref = find_inst_ref(curr.value)
-                assert ref is not None
-                assert ref.inst in curr.scope.leaf_type().instances
+                assert curr.inst is not None
+                assert curr.inst in curr.scope.leaf_type().instances
             if prev is not None:
                 assert _is_driver(prev, curr)
             prev = curr
