@@ -28,7 +28,11 @@ class ScopeInterface(abc.ABC):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def __equals__(self, other: 'ScopeInterface') -> bool:
+    def __eq__(self, other: 'ScopeInterface') -> bool:
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def __ne__(self, other: 'ScopeInterface') -> bool:
         raise NotImplementedError()
 
     @validator
@@ -65,13 +69,16 @@ class Scope(ScopeInterface):
         path.append(leaf)
         return Scope(self.top, path)
 
-    def __equals__(self, other: 'Scope') -> bool:
+    def __eq__(self, other: 'Scope') -> bool:
         if not isinstance(other, Scope):
             return NotImplemented
         return (
             (self.top is other.top) and
             (len(self.path) == len(other.path)) and
             (all(x is y for x, y in zip(self.path, other.path))))
+
+    def __ne__(self, other: 'Scope') -> bool:
+        return not self == other
 
     def __str__(self):
         top = self.top.name
@@ -94,7 +101,12 @@ class ScopedValue:
     value: m.Type
     scope: ScopeInterface
 
-    def __equals__(self, other: 'ScopedValue') -> bool:
+    def __eq__(self, other: 'ScopedValue') -> bool:
+        if not isinstance(other, ScopedValue):
+            return NotImplemented
+        return self.value is other.value and self.scope == other.scope
+
+    def __ne__(self, other: 'ScopedValue') -> bool:
         if not isinstance(other, ScopedValue):
             return NotImplemented
         return self.value is other.value and self.scope == other.scope
@@ -117,9 +129,6 @@ class SignalPathInterface(abc.ABC):
     @validator
     @abc.abstractmethod
     def validate(self) -> None:
-        raise NotImplementedError()
-
-    def __equals__(self, other: 'ScopeInterface') -> bool:
         raise NotImplementedError()
 
 
