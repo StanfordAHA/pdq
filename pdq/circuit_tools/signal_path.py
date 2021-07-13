@@ -6,7 +6,7 @@ from typing import Iterable, List, Optional, Tuple, Union
 import magma as m
 
 from pdq.circuit_tools.circuit_utils import (
-    find_ref, find_defn_ref, find_inst_ref)
+    find_ref, find_defn_ref, find_inst_ref, inst_port_to_defn_port)
 from pdq.common.validator import validator
 
 
@@ -163,7 +163,9 @@ class ScopedValue:
         return self.value is other.value and self.scope == other.scope
 
     def __str__(self):
-        return f"{str(self.scope)}.{str(self.value)}"
+        if self.defn is not None:
+            return f"{str(self.value)}"
+        return f"{str(self.scope)}.{repr(self.value)}"
 
 
 @dataclasses.dataclass(frozen=True)
@@ -224,8 +226,17 @@ def _is_driver(driver: ScopedBit, drivee: ScopedBit) -> bool:
         if driver.scope == drivee.scope:
             return drivee.value.trace() is driver.value
         #   (b) inst-to-inst connection at nested levels
-        # TODO(rsetaluri): Implement these^ two cases.
-        raise NotImplementedError()
+        #       There are 2 (vaild) sub-cases here:
+        #         (i) drivee is nested below driver
+        if driver.scope.extend(driver.inst) == drivee.scope:
+            defn_bit = inst_port_to_defn_port(driver.value, driver.ref)
+            return drivee.value.trace() is defn_bit
+        #         (ii) driver is nested below drivee
+        elif drivee.scope.extend(drivee.inst) == driver.scope:
+            defn_bit = inst_port_to_defn_port(drivee.value, drivee.ref)
+            return defn_bit.trace() is driver.value
+        else:
+            return False
     # Check the defn-to-inst and inst-to-defn cases.
     if (_match(m.ref.DefnRef, m.ref.InstRef) or
         _match(m.ref.InstRef, m.ref.DefnRef)):
