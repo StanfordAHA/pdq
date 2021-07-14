@@ -8,7 +8,7 @@ from pdq.circuit_tools.circuit_primitives import get_primitive_drivers
 from pdq.circuit_tools.circuit_utils import (
     find_inst_ref, find_defn_ref, inst_port_to_defn_port,
     defn_port_to_inst_port)
-from pdq.circuit_tools.signal_path import ScopedBit
+from pdq.circuit_tools.signal_path import Scope, ScopedBit
 from pdq.common.validator import validator
 
 
@@ -84,7 +84,10 @@ class SimpleDirectedGraphViewBase(DirectedGraphInterface):
             if node.bit.value.is_input():
                 if include_incoming:
                     driver = node.bit.value.trace()
-                    if driver is None or driver.const():
+                    if driver is None:
+                        return _empty
+                    if driver.const():
+                        yield BitPortNode(ScopedBit(driver, Scope(None)))
                         return _empty()
                     yield BitPortNode(ScopedBit(driver, scope))
                 return
@@ -120,7 +123,10 @@ class SimpleDirectedGraphViewBase(DirectedGraphInterface):
                 # Non-primitive instance case; we descend into the definition.
                 defn_port = inst_port_to_defn_port(node.bit.value, node.bit.ref)
                 driver = defn_port.trace()
-                if driver is None or driver.const():
+                if driver is None:
+                    return _empty()
+                if driver.const():
+                    yield BitPortNode(ScopedBit(driver, Scope(None)))
                     return _empty()
                 ref = find_defn_ref(driver)
                 if ref is not None:
@@ -134,8 +140,10 @@ class SimpleDirectedGraphViewBase(DirectedGraphInterface):
         assert node.bit.value.is_input()  # no support for InOut types
         if include_incoming:
             driver = node.bit.value.trace()
-            if driver is None or driver.const():
+            if driver is None:
                 yield from _empty()
+            elif driver.const():
+                yield BitPortNode(ScopedBit(driver, Scope(None)))
             else:
                 ref = find_defn_ref(driver)
                 if ref is not None:
