@@ -29,7 +29,7 @@ def _get_register_drivers(ckt, name, sel):
     assert name == "out"
     assert isinstance(sel, m.value_utils.ArraySelector)
     assert sel.child is None
-    return [ckt.I[sel.index]]
+    return []
 ################################################################################
 
 
@@ -61,9 +61,11 @@ def _get_coreir_op_drivers(ckt, name, sel):
         n = 0
     if op_name == "orr":
         op = lambda x: functools.reduce(operator.or_, x)
+    elif op_name == "andr":
+        op = lambda x: functools.reduce(operator.and_, x)
     else:
         op = getattr(operator, m.primitive_to_python(op_name))
-    if op_name in ("not", "neg", "orr"):
+    if op_name in ("not", "neg", "orr", "andr"):
         inputs = list(ckt.I)
     else:
         inputs = list(m.concat(ckt.I0, ckt.I1))

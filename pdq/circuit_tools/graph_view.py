@@ -4,6 +4,7 @@ from typing import Iterable, Union
 
 import magma as m
 
+from pdq.circuit_tools.circuit_primitives import get_primitive_drivers
 from pdq.circuit_tools.circuit_utils import (
     find_inst_ref, find_defn_ref, inst_port_to_defn_port,
     defn_port_to_inst_port)
@@ -83,7 +84,7 @@ class SimpleDirectedGraphViewBase(DirectedGraphInterface):
             if node.bit.value.is_input():
                 if include_incoming:
                     driver = node.bit.value.trace()
-                    if driver is None:
+                    if driver is None or driver.const():
                         return _empty()
                     yield BitPortNode(ScopedBit(driver, scope))
                 return
@@ -119,7 +120,7 @@ class SimpleDirectedGraphViewBase(DirectedGraphInterface):
                 # Non-primitive instance case; we descend into the definition.
                 defn_port = inst_port_to_defn_port(node.bit.value, node.bit.ref)
                 driver = defn_port.trace()
-                if driver is None:
+                if driver is None or driver.const():
                     return _empty()
                 ref = find_defn_ref(driver)
                 if ref is not None:
@@ -133,7 +134,7 @@ class SimpleDirectedGraphViewBase(DirectedGraphInterface):
         assert node.bit.value.is_input()  # no support for InOut types
         if include_incoming:
             driver = node.bit.value.trace()
-            if driver is None:
+            if driver is None or driver.const():
                 yield from _empty()
             else:
                 ref = find_defn_ref(driver)
@@ -177,11 +178,8 @@ class SimpleDirectedGraphViewBase(DirectedGraphInterface):
             primitive: m.DefineCircuitKind,
             inst_bit: m.Out(m.Bit)) -> Iterable[m.Bit]:
         assert inst_bit.is_output()
-        for port in primitive.interface.ports.values():
-            port_as_bits = m.as_bits(port)
-            for other_bit in port_as_bits:
-                if other_bit.is_output():
-                    yield other_bit
+        defn_bit = inst_port_to_defn_port(inst_bit)
+        return get_primitive_drivers(defn_bit, allow_default=False)
 
     def _get_primitive_drivees(
             self,

@@ -160,7 +160,7 @@ class ScopedValue:
     def __ne__(self, other: 'ScopedValue') -> bool:
         if not isinstance(other, ScopedValue):
             return NotImplemented
-        return self.value is other.value and self.scope == other.scope
+        return not self == other
 
     def __str__(self):
         if self.defn is not None:
@@ -168,7 +168,7 @@ class ScopedValue:
         return f"{str(self.scope)}.{repr(self.value)}"
 
 
-@dataclasses.dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True, eq=False)
 class ScopedBit(ScopedValue):
     value: m.Bit
     scope: ScopeInterface
