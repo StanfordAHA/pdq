@@ -6,8 +6,9 @@ from typing import Iterable, List, Optional
 import magma as m
 from magma.primitives.register import _CoreIRRegister
 
-from pdq.circuit_tools.circuit_utils import find_inst_ref, find_instances_name_equals, InstSelector
-from pdq.circuit_tools.graph_view import BitPortNode, SimpleDirectedGraphViewBase
+from pdq.circuit_tools.circuit_utils import InstSelector
+from pdq.circuit_tools.graph_view import (
+    BitPortNode, SimpleDirectedGraphViewBase)
 from pdq.circuit_tools.signal_path import Scope, ScopedBit, ScopedValue
 
 
@@ -130,7 +131,7 @@ def _process_graph(ckt, terminals):
             raise NotImplementedError()
         assert node.bit.value.is_output()
         flags.is_register_output = True
-        _visit_register_output(node)        
+        _visit_register_output(node)
 
 
     def _visit_primitive_port(node, flags):

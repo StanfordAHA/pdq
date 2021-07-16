@@ -37,7 +37,7 @@ class _TestOpCache:
                     k[0] = WrappedOp(k[0])
                     k[1:] = list(map(int, k[1:]))
                     k = tuple(k)
-                    cache[k] = v
+                    cache[k] = bool(int(v))
         except FileNotFoundError:
             pass
         return cache
@@ -53,7 +53,7 @@ class _TestOpCache:
             for k, v in self._cache.items():
                 k = list(k)
                 k[0] = k[0].name
-                writer.writerow(k + [v])
+                writer.writerow(k + [int(v)])
 
     def get_or_set(self, key, evaluator):
         if self._cache is None:
