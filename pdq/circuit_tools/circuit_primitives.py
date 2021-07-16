@@ -5,7 +5,8 @@ import magma as m
 from magma.primitives.mux import CoreIRCommonLibMuxN
 from magma.primitives.register import _CoreIRRegister
 
-from pdq.circuit_tools.circuit_primitives_utils import binop_to_unop, test_op
+from pdq.circuit_tools.circuit_primitives_utils import (
+    WrappedOp, binop_to_unop, test_op)
 from pdq.circuit_tools.circuit_utils import find_defn_ref
 from pdq.common.algorithms import first
 
@@ -70,6 +71,7 @@ def _get_coreir_op_drivers(ckt, name, sel):
     else:
         inputs = list(m.concat(ckt.I0, ckt.I1))
         op = binop_to_unop(op)
+    op = WrappedOp(op_name, op)
     M = len(inputs)
     tests = (test_op(op, M, N, m, n) for m in range(M))
     return [inputs[i] for i, t in enumerate(tests) if t]
