@@ -42,7 +42,10 @@ def find_ref(
         return ref
     if ref is None:
         return None
-    return find_ref(ref.parent(), condition)
+    parent = ref.parent()
+    if parent is ref:
+        return None
+    return find_ref(parent, condition)
 
 
 def find_inst_ref(value: m.Type):
@@ -111,3 +114,25 @@ def make_port_selector(value: m.Type):
             inst.name)
     defn = ref.defn
     return DefnSelector(m.value_utils.make_selector(value), ref.name)
+
+
+def inst_port_to_defn_port(value: m.Type, ref: Optional[m.ref.InstRef] = None):
+    if ref is None:
+        ref = find_inst_ref(value)
+    if ref is None or not isinstance(ref, m.ref.InstRef):
+        raise ValueError(f"Unexpected value (value={value}, ref={ref})")
+    selector = DefnSelector(m.value_utils.make_selector(value), ref.name)
+    return selector.select(type(ref.inst))
+
+
+def defn_port_to_inst_port(
+        value: m.Type, inst: m.Circuit, ref: Optional[m.ref.InstRef] = None):
+    if ref is None:
+        ref = find_defn_ref(value)
+    check = (ref is None or
+             not isinstance(ref, m.ref.DefnRef)
+             or not isinstance(inst, ref.defn))
+    if check:
+        raise ValueError(f"Unexpected value (value={value}, ref={ref})")
+    selector = InstSelector(m.value_utils.make_selector(value), ref.name)
+    return selector.select(inst)

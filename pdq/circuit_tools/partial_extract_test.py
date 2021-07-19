@@ -1,138 +1,34 @@
-from designs.one_bit_alu import OneBitAlu
-from designs.simple_alu import SimpleAlu
-from magma_examples.magma_examples.shift_register import ShiftRegister
-from pdq.common.algorithms import only
-from pdq.circuit_tools.circuit_utils import (
-    find_instances_name_equals, find_instances_name_substring)
-from pdq.circuit_tools.partial_extract import partial_extract
-from pdq.circuit_tools.signal_path import TopSignalPath, InternalSignalPath
+import tempfile
+
+import magma as m
+import magma.testing
+
+from pdq.circuit_tools.circuit_utils import find_instances_name_equals
+from pdq.circuit_tools.graph_view import BitPortNode
+from pdq.circuit_tools.partial_extract import extract_from_terminals
+from pdq.circuit_tools.signal_path import Scope, ScopedBit
 
 
-def test_basic():
-    xor = only(find_instances_name_substring(OneBitAlu, "xor"))
-    mux = only(find_instances_name_substring(OneBitAlu, "Mux"))
-    path = TopSignalPath(
-        src=OneBitAlu.a,
-        dst=OneBitAlu.out,
-        path=[
-            InternalSignalPath(
-                src=xor.I0,
-                dst=xor.O),
-            InternalSignalPath(
-                src=mux.I2,
-                dst=mux.O)
-        ]
-    )
+def test_extract_from_terminals_basic():
 
-    Partial = partial_extract(OneBitAlu, path)
+    class _Foo(m.Circuit):
+        io = m.IO(
+            I0=m.In(m.Bits[2]),
+            I1=m.In(m.Bits[2]),
+            I2=m.In(m.Bit),
+            O=m.Out(m.Bits[4]))
+        f = m.register(io.I0) | m.register(io.I1)
+        io.O[0] @= f[0]
+        io.O[1] @= ~io.I0[0]
+        io.O[2] @= io.I2
+        io.O[3] @= io.I2
 
-    # Check that there are only 2 instances.
-    assert len(Partial.instances) == 2
-    new_xor = only(find_instances_name_substring(Partial, "xor"))
-    new_mux = only(find_instances_name_substring(Partial, "Mux"))
-    assert new_xor.name == xor.name
-    assert type(new_xor) is type(xor)
-    assert new_mux.name == mux.name
-    assert type(new_mux) is type(mux)
-
-    # Check the connections along the desired timing path.
-    assert new_xor.I0.trace() is Partial.partial_src_pin__
-    assert new_mux.I2.trace() is new_xor.O
-    assert Partial.partial_dst_pin__.trace() is new_mux.O
-
-
-def test_bits_select():
-    add = only(find_instances_name_substring(SimpleAlu, "add"))
-    mux = only(find_instances_name_substring(SimpleAlu, "Mux"))
-
-    path = TopSignalPath(
-        src=SimpleAlu.a[0],
-        dst=SimpleAlu.out[0],
-        path=[
-            InternalSignalPath(
-                src=add.I0[0],
-                dst=add.O[0]),
-            InternalSignalPath(
-                src=mux.I0[0],
-                dst=mux.O[0])
-        ]
-    )
-
-    Partial = partial_extract(SimpleAlu, path)
-
-    # Check that there are only 2 instances.
-    assert len(Partial.instances) == 2
-    new_add = only(find_instances_name_substring(Partial, "add"))
-    new_mux = only(find_instances_name_substring(Partial, "Mux"))
-    assert new_add.name == add.name
-    assert type(new_add) is type(add)
-    assert new_mux.name == mux.name
-    assert type(new_mux) is type(mux)
-
-    # Check the connections along the desired timing path.
-    assert new_add.I0[0].trace() is Partial.partial_src_pin__
-    assert new_mux.I0[0].trace() is new_add.O[0]
-    assert Partial.partial_dst_pin__.trace() is new_mux.O[0]
-
-
-def test_hierarchical():
-    regs = find_instances_name_substring(ShiftRegister, "Register_inst")
-    regs = list(sorted(regs, key=lambda r: r.name))
-
-    def _get_sub_reg(reg):
-        return only(find_instances_name_substring(type(reg), "reg_"))
-
-    path = TopSignalPath(
-        src=ShiftRegister.I,
-        dst=ShiftRegister.O,
-        path = [
-            InternalSignalPath(
-                src=regs[0].I,
-                dst=regs[0].O),
-            InternalSignalPath(
-                src=regs[1].I,
-                dst=regs[1].O,
-                path=[
-                    InternalSignalPath(
-                        src=_get_sub_reg(regs[1]).I[0],
-                        dst=_get_sub_reg(regs[1]).O[0])
-                ]
-            ),
-            InternalSignalPath(
-                src=regs[2].I,
-                dst=regs[2].O),
-            InternalSignalPath(
-                src=regs[3].I,
-                dst=regs[3].O,
-                path=[
-                    InternalSignalPath(
-                        src=_get_sub_reg(regs[3]).I[0],
-                        dst=_get_sub_reg(regs[3]).O[0])
-                ]
-            ),
-        ]
-    )
-
-    Partial = partial_extract(ShiftRegister, path)
-
-    # Check the instances.
-    assert len(Partial.instances) == 4
-    expected_insts = {
-        "Register_inst0": type(regs[0]),
-        "Register_inst1__reg_P1_inst0": type(_get_sub_reg(regs[1])),
-        "Register_inst2": type(regs[2]),
-        "Register_inst3__reg_P1_inst0": type(_get_sub_reg(regs[3]))
-    }
-    new_insts = {name: only(find_instances_name_equals(Partial, name))
-                 for name in expected_insts}
-    for name, T in expected_insts.items():
-        assert new_insts[name].name == name
-        assert type(new_insts[name]) is T
-
-    # Check the connections along the extracted path.
-    insts = list(new_insts.values())
-    assert insts[0].I.trace() is Partial.partial_src_pin__
-    assert insts[1].I[0].trace() is insts[0].O
-    assert insts[2].I.trace() is insts[1].O[0]
-    assert insts[3].I[0].trace() is insts[2].O
-    assert Partial.partial_dst_pin__.trace() is insts[3].O[0]
+    ckt = _Foo
+    terminals = [BitPortNode(ScopedBit(o, Scope(ckt))) for o in ckt.O[:2]]
+    ckt_partial = extract_from_terminals(ckt, terminals)
+    with tempfile.TemporaryDirectory() as directory:
+        basename = f"{directory}/{ckt_partial.name}"
+        m.compile(basename, ckt_partial, inline=True)
+        gold = "golds/partial_extract_extract_from_terminals_basic.v"
+        assert m.testing.utils.check_files_equal(
+            __file__, f"{basename}.v", gold)

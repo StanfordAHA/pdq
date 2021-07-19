@@ -1,8 +1,10 @@
 import dataclasses
+import random
 from typing import List, Optional, Set, Tuple
 
 import magma as m
 
+from pdq.circuit_tools.circuit_primitives import get_primitive_drivers
 from pdq.circuit_tools.circuit_utils import (
     DefnSelector, InstSelector, find_defn_ref, find_inst_ref)
 from pdq.circuit_tools.signal_path import (
@@ -49,21 +51,31 @@ class _BackwardsPathTracer:
 
     def run(self, bit: m.Bit):
         if not self._descend(self._ckt):
-            paths = []
-            for port in self._ckt.interface.outputs():
-                for src in m.as_bits(port):
-                    paths.append(TopSignalPath(src, bit))
-            return paths
+            srcs = get_primitive_drivers(bit, allow_default=False)
+            return [TopSignalPath(src, bit) for src in srcs]
         dst = bit
         data = {}
         work = [bit]
         while work:
             bit = work.pop()
+            if bit in data:  # skip bits we've already seen
+                continue
             driver = bit.value()
+            # NOTE(rsetaluri): This is somewhat of a hack to support undriven
+            # wires. We mock driving them with a constant so they get excluded
+            # anyway. This is probably ok since unwired ports are usually clock
+            # types which will be wired up later. Therefore, they are not
+            # interesting data timing paths.
+            if driver is None:  # hack!
+                driver = m.GND
             assert driver is not None
             ref = find_inst_ref(driver)
             if ref is None:  # defn ref
                 ref = find_defn_ref(driver)
+                if ref is None:
+                    assert driver.const()
+                    data[bit] = driver
+                    continue
                 assert ref is not None
                 data[bit] = driver
                 continue
@@ -79,13 +91,16 @@ class _BackwardsPathTracer:
                     path.path),
                 paths))
             data[bit] = paths
-            work += list(set(path.src for path in paths))
+            # NOTE(rsetaluri): Dict keys are used to mimic an ordered set.
+            work += list({path.src: None for path in paths})
 
         out = []
 
         def _assemble(bit, curr):
             paths = data[bit]
             if isinstance(paths, m.Type):
+                if paths.const():
+                    return
                 out.append(TopSignalPath(paths, dst, curr))
                 return
             for path in paths:
@@ -141,3 +156,17 @@ def generate_paths(
     if query.thru:
         paths = filter(lambda p: _path_is_thru(p, query.thru), paths)
     return list(paths)
+
+
+def generate_random_path(ckt: m.DefineCircuitKind) -> TopSignalPath:
+    it = _BackwardsPathTracer(ckt)
+    outputs = sum(map(list, map(m.as_bits, ckt.interface.ports.values())), [])
+    outputs = list(filter(lambda b: b.is_input(), outputs))
+    while outputs:
+        idx = random.randrange(0, len(outputs))
+        dst = outputs.pop(idx)
+        paths = it.run(dst)
+        if not paths:
+            continue
+        return random.choice(paths)
+    raise RuntimeError("No valid path found")

@@ -2,7 +2,8 @@ import pytest
 
 from designs.simple_alu import SimpleAlu
 from pdq.circuit_tools.circuit_utils import find_instances_name_substring
-from pdq.circuit_tools.generate_paths import SignalPathQuery, generate_paths
+from pdq.circuit_tools.generate_paths import (
+    SignalPathQuery, generate_paths, generate_random_path)
 from pdq.circuit_tools.signal_path import (
     TopSignalPath, InternalSignalPath, paths_equal)
 from pdq.common.algorithms import only
@@ -60,27 +61,26 @@ def test_basic(generate_paths_test):
 
     # Check all the paths through the functional units (add, sub).
     for i, unit in enumerate(units):
-        for j, bit in enumerate(unit.O):
-            mux_in = getattr(mux, f"I{i}")
-            path = TopSignalPath(
-                src=SimpleAlu.a[0],
-                dst=SimpleAlu.out[0],
-                path=[
-                    InternalSignalPath(
-                        src=unit.I0[0],
-                        dst=bit),
-                    InternalSignalPath(
-                        src=mux_in[j],
-                        dst=mux.O[0],
-                        path=[
-                            InternalSignalPath(
-                                src=mux_prim.I.data[i][j],
-                                dst=mux_prim.O[0])
-                        ]
-                    )
-                ]
-            )
-            generate_paths_test.pop_path(path)
+        mux_in = getattr(mux, f"I{i}")
+        path = TopSignalPath(
+            src=SimpleAlu.a[0],
+            dst=SimpleAlu.out[0],
+            path=[
+                InternalSignalPath(
+                    src=unit.I0[0],
+                    dst=unit.O[0]),
+                InternalSignalPath(
+                    src=mux_in[0],
+                    dst=mux.O[0],
+                    path=[
+                        InternalSignalPath(
+                            src=mux_prim.I.data[i][0],
+                            dst=mux_prim.O[0])
+                    ]
+                )
+            ]
+        )
+        generate_paths_test.pop_path(path)
 
     # Check the passthrough path.
     generate_paths_test.pop_path(
@@ -113,27 +113,33 @@ def test_thru(generate_paths_test):
     mux_prim = generate_paths_test.get_instance("mux", type(mux))
 
     # Check the path through the add.
-    for j, bit in enumerate(adder.O):
-        mux_in = getattr(mux, f"I{0}")
-        path = TopSignalPath(
-            src=SimpleAlu.a[0],
-            dst=SimpleAlu.out[0],
-            path=[
-                InternalSignalPath(
-                    src=adder.I0[0],
-                    dst=bit),
-                InternalSignalPath(
-                    src=mux_in[j],
-                    dst=mux.O[0],
-                    path=[
-                        InternalSignalPath(
-                            src=mux_prim.I.data[0][j],
-                            dst=mux_prim.O[0])
-                    ]
-                )
-            ]
-        )
-        generate_paths_test.pop_path(path)
+    mux_in = getattr(mux, f"I{0}")
+    path = TopSignalPath(
+        src=SimpleAlu.a[0],
+        dst=SimpleAlu.out[0],
+        path=[
+            InternalSignalPath(
+                src=adder.I0[0],
+                dst=adder.O[0]),
+            InternalSignalPath(
+                src=mux_in[0],
+                dst=mux.O[0],
+                path=[
+                    InternalSignalPath(
+                        src=mux_prim.I.data[0][0],
+                        dst=mux_prim.O[0])
+                ]
+            )
+        ]
+    )
+    generate_paths_test.pop_path(path)
 
     # Check that we've found all the paths.
     assert len(generate_paths_test.paths) == 0
+
+
+def test_random_path():
+    path = generate_random_path(SimpleAlu)
+    v = path.validate(SimpleAlu)
+    if not v:
+        v.throw()

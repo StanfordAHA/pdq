@@ -2,7 +2,6 @@ from typing import Any, Callable, Iterable
 
 
 def only(lst: Iterable):
-    err = f"iterable expected to have exactly one element; got {lst}"
     it = iter(lst)
     try:
         value = next(it)
@@ -15,6 +14,15 @@ def only(lst: Iterable):
     else:
         msg = f"Expecte one element got {[value, new_value] + list(it)}"
         raise ValueError(msg)
+
+
+def first(lst: Iterable):
+    it = iter(lst)
+    try:
+        value = next(it)
+    except StopIteration:
+        raise ValueError("Expected at least one element, got []") from None
+    return value
 
 
 def try_call(fn: Callable[[], Any], ExceptionType: Any):
