@@ -16,6 +16,17 @@ def _empty() -> Iterable:
     yield from ()
 
 
+def _trace_drivees(bit: m.Bit) -> Iterable[m.Bit]:
+    drivees = bit.driving()
+    if not drivees:
+        return _empty()
+    for drivee in drivees:
+        if drivee.is_input() or drivee.is_inout():
+            yield drivee
+            continue
+        yield from _trace_drivees(drivee)
+
+
 class NodeInterface(abc.ABC):
     # NOTE(rsetaluri): We'd like this class to have abstract methods __eq__ and
     # __hash__, but unfortunately implementations relying on dataclass
@@ -93,13 +104,13 @@ class SimpleDirectedGraphViewBase(DirectedGraphInterface):
                 return
             assert node.bit.value.is_output()  # no support for InOut types
             if include_outgoing:
-                for drivee in node.bit.value.driving():
+                for drivee in _trace_drivees(node.bit.value):
                     yield BitPortNode(ScopedBit(drivee, scope))
             return
         assert node.bit.inst is not None  # no support for anon bits
         if node.bit.value.is_output():
             if include_outgoing:
-                for drivee in node.bit.value.driving():
+                for drivee in _trace_drivees(node.bit.value):
                     ref = find_inst_ref(drivee)
                     if ref is not None:
                         yield BitPortNode(ScopedBit(drivee, node.bit.scope))
@@ -158,8 +169,6 @@ class SimpleDirectedGraphViewBase(DirectedGraphInterface):
                     assert ref is not None  # no support for anon bits
                     yield BitPortNode(ScopedBit(driver, node.bit.scope))
         if include_outgoing:
-            # TODO(rsetaluri): Check for primitive-ness of type.
-            # TODO(rsetaluri): Get primitive drivees.
             type_ = type(node.bit.inst)
             if not m.isdefinition(type_):  # primitive instance case
                 drivees = self._get_primitive_drivees(type_, node.bit.value)
@@ -168,7 +177,7 @@ class SimpleDirectedGraphViewBase(DirectedGraphInterface):
                     yield BitPortNode(ScopedBit(drivee, node.bit.scope))
                 return
             defn_port = inst_port_to_defn_port(node.bit.value, node.bit.ref)
-            for drivee in defn_port.driving():
+            for drivee in _trace_drivees(defn_port):
                 ref = find_defn_ref(drivee)
                 if ref is not None:
                     # TODO(rsetaluri): Implement this case.
