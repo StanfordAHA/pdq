@@ -229,8 +229,8 @@ def _extract_from_terminals_impl(
         _make_grouped_ports(terminals, m.Out))
 
 
-    bits_to_lift = []
-    bits_to_lift += filter(
+    inputs_to_lift = []
+    inputs_to_lift += filter(
         lambda b: not b.driven(),
         _chain_values_as_bits(
             *terminal_port_name_to_extracted_value.values()))
@@ -243,20 +243,20 @@ def _extract_from_terminals_impl(
             T = type(bit).undirected_t
             clk_ports[_clk_type_name(T)] = m.In(T)
         elif not bit.driven():
-            bits_to_lift.append(bit)
+            inputs_to_lift.append(bit)
 
-    lifted_ports, extracted_bit_to_lifted_port_name = (
+    lifted_inputs, extracted_bit_to_lifted_input_name = (
         _lift_extracted_bits_to_ports(
-            bits_to_lift, lambda i, _: f"lifted_input{i}"))
+            inputs_to_lift, lambda i, _: f"lifted_input{i}"))
 
-    io = m.IO(**root_ports, **terminal_ports, **lifted_ports, **clk_ports)
+    io = m.IO(**root_ports, **terminal_ports, **lifted_inputs, **clk_ports)
 
     for port_name, value in root_port_name_to_extracted_value.items():
         value @= getattr(io, port_name)
     for port_name, value in terminal_port_name_to_extracted_value.items():
         port = getattr(io, port_name)
         port @= value
-    for bit, port_name in extracted_bit_to_lifted_port_name.items():
+    for bit, port_name in extracted_bit_to_lifted_input_name.items():
         bit @= getattr(io, port_name)
 
     return io
