@@ -25,6 +25,9 @@ module _Foo_Partial (
     input lifted_input1,
     input lifted_input2,
     input lifted_input3,
+    output lifted_output_0,
+    output lifted_output_1,
+    output lifted_output_2,
     input CLK
 );
 wire [1:0] _Foo_Register_inst0_reg_P2_inst0_out;
@@ -50,5 +53,8 @@ coreir_reg #(
 );
 assign _Foo_magma_Bits_2_or_inst0_out = ({lifted_input2,_Foo_Register_inst0_reg_P2_inst0_out[0]}) | ({lifted_input3,_Foo_Register_inst1_reg_P2_inst0_out[0]});
 assign O = {lifted_input1,lifted_input0,~ I0[0],_Foo_magma_Bits_2_or_inst0_out[0]};
+assign lifted_output_0 = _Foo_magma_Bits_2_or_inst0_out[1];
+assign lifted_output_1 = _Foo_Register_inst0_reg_P2_inst0_out[1];
+assign lifted_output_2 = _Foo_Register_inst1_reg_P2_inst0_out[1];
 endmodule
 

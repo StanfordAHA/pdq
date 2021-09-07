@@ -67,15 +67,18 @@ def _group_nodes_by_root_port(nodes: Iterable[BitPortNode]):
     return groups
 
 
-def _lift_extracted_bits_to_ports(bits, namer):
+def _lift_extracted_bits_to_ports(bits, qualifier, namer):
     extracted_bit_to_lifted_port_name = {}
     ports = {}
     for i, bit in enumerate(bits):
         # NOTE(rsetaluri): `driven()` should be used in other places, not
         # `value() is not None`.
-        assert not bit.driven()
+        # NOTE(rsetaluri): This check is a bit hacky. We should do it in another
+        # place or forego it altogether.
+        if qualifier is m.In:
+            assert not bit.driven()
         name = namer(i, bit)
-        ports[name] = m.In(m.Bit)
+        ports[name] = qualifier(m.Bit)
         extracted_bit_to_lifted_port_name[bit] = name
     return ports, extracted_bit_to_lifted_port_name
 
@@ -235,9 +238,9 @@ def _extract_from_terminals_impl(
         _chain_values_as_bits(
             *terminal_port_name_to_extracted_value.values()))
     clk_ports = {}
-    inst_bits = _chain_values_as_bits(
+    inst_bits = list(_chain_values_as_bits(
         *itertools.chain(
-            *(inst.interface.ports.values() for inst in new_insts.values())))
+            *(inst.interface.ports.values() for inst in new_insts.values()))))
     for bit in filter(lambda b: b.is_input(), inst_bits):
         if isinstance(bit, m.ClockTypes):
             T = type(bit).undirected_t
@@ -247,9 +250,20 @@ def _extract_from_terminals_impl(
 
     lifted_inputs, extracted_bit_to_lifted_input_name = (
         _lift_extracted_bits_to_ports(
-            inputs_to_lift, lambda i, _: f"lifted_input{i}"))
+            inputs_to_lift, m.In, lambda i, _: f"lifted_input{i}"))
 
-    io = m.IO(**root_ports, **terminal_ports, **lifted_inputs, **clk_ports)
+    outputs_to_lift = filter(
+        lambda b: b.is_output() and not b.driving(), inst_bits)
+    lifted_outputs, extracted_bit_to_lifted_output_name = (
+        _lift_extracted_bits_to_ports(
+            outputs_to_lift, m.Out, lambda i, _: f"lifted_output_{i}"))
+
+    io = m.IO(
+        **root_ports,
+        **terminal_ports,
+        **lifted_inputs,
+        **lifted_outputs,
+        **clk_ports)
 
     for port_name, value in root_port_name_to_extracted_value.items():
         value @= getattr(io, port_name)
@@ -258,6 +272,9 @@ def _extract_from_terminals_impl(
         port @= value
     for bit, port_name in extracted_bit_to_lifted_input_name.items():
         bit @= getattr(io, port_name)
+    for bit, port_name in extracted_bit_to_lifted_output_name.items():
+        port = getattr(io, port_name)
+        port @= bit
 
     return io
 
