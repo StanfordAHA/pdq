@@ -33,7 +33,7 @@ class ScopedInst:
 
 @dataclasses.dataclass(frozen=True)
 class ExtractFromTerminalsOpts:
-    num_neighbors: int
+    num_neighbors: int = 0
 
 
 def _chain_values_as_bits(*values):

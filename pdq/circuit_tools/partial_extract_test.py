@@ -1,3 +1,4 @@
+import pytest
 import tempfile
 
 import magma as m
@@ -30,5 +31,36 @@ def test_extract_from_terminals_basic():
         basename = f"{directory}/{ckt_partial.name}"
         m.compile(basename, ckt_partial, inline=True)
         gold = "golds/partial_extract_extract_from_terminals_basic.v"
+        assert m.testing.utils.check_files_equal(
+            __file__, f"{basename}.v", gold)
+
+
+@pytest.mark.parametrize("num_neighbors", [0, 1, 2, 3])
+def test_extract_from_terminals_neighbors(num_neighbors):
+
+    class _Foo(m.Circuit):
+        io = m.IO(
+            I0=m.In(m.Bits[2]),
+            I1=m.In(m.Bits[2]),
+            O0=m.Out(m.Bit),
+            O1=m.Out(m.Bit),
+            O2=m.Out(m.Bit),
+            O3=m.Out(m.Bit),
+        )
+        res = io.I0 | io.I1
+        io.O0 @= res[0]
+        io.O1 @= ~~res[0]
+        io.O2 @= ~res[0]
+        io.O3 @= res[1]
+
+    ckt = _Foo
+    terminals = [BitPortNode(ScopedBit(ckt.O2, Scope(ckt)))]
+    ckt_partial = extract_from_terminals(
+        ckt, terminals, num_neighbors=num_neighbors)
+    with tempfile.TemporaryDirectory() as directory:
+        basename = f"{directory}/{ckt_partial.name}"
+        m.compile(basename, ckt_partial, inline=True)
+        gold = (f"golds/partial_extract_extract_from_terminals_neighbors-"
+                f"{num_neighbors}.v")
         assert m.testing.utils.check_files_equal(
             __file__, f"{basename}.v", gold)
