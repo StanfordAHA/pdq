@@ -31,6 +31,11 @@ class ScopedInst:
         return not self == other
 
 
+@dataclasses.dataclass(frozen=True)
+class ExtractFromTerminalsOpts:
+    num_neighbors: int
+
+
 def _chain_values_as_bits(*values):
     return itertools.chain(*map(m.as_bits, values))
 
@@ -81,6 +86,21 @@ def _lift_extracted_bits_to_ports(bits, qualifier, namer):
         ports[name] = qualifier(m.Bit)
         extracted_bit_to_lifted_port_name[bit] = name
     return ports, extracted_bit_to_lifted_port_name
+
+
+def _get_fanout_sinks(graph, node):
+    sinks = []
+    work = list(graph.outgoing(node))
+    while work:
+        curr = work.pop()
+        is_sink = (curr.bit.defn is not None or
+                   ((curr.bit.inst is not None) and
+                    (m.isprimitive(type(curr.bit.inst)))))
+        if is_sink:
+            sinks += [curr]
+            continue
+        work += list(graph.outgoing(curr))
+    return sinks
 
 
 def _process_graph(ckt, terminals):
@@ -192,10 +212,66 @@ def _process_graph(ckt, terminals):
         if is_root and not flags.is_register_output:
             roots.append(node)
 
+
+    def _get_inst(key):
+        return new_insts[key]
+
+
+    def _expand_neighbors(insts):
+        sink_map = {}
+        for scoped_inst, new_inst in insts.items():
+            bits = filter(
+                lambda b: b.is_output(),
+                _chain_values_as_bits(
+                    *(scoped_inst.inst.interface.ports.values())))
+            for bit in bits:
+                node = BitPortNode(ScopedBit(bit, scoped_inst.scope))
+                sinks = filter(
+                    lambda s: s not in node_to_bit,
+                    _get_fanout_sinks(graph, node))
+                sink_map[node] = sinks
+        new_insts = {}
+        for node, sinks in sink_map.items():
+            if node in node_to_bit:
+                driver = node_to_bit[node]
+            else:
+                driver = m.Bit()
+                node_to_bit[node] = driver
+                sel = InstSelector(
+                    m.value_utils.make_selector(node.bit.value),
+                    node.bit.ref.name)
+                inst = _get_inst(ScopedInst(node.bit.inst, node.bit.scope))
+                driver @= sel.select(inst)
+            for sink in sinks:
+                if sink.bit.inst is not None:
+                    scoped_inst = ScopedInst(sink.bit.inst, sink.bit.scope)
+                    new_inst, new_inst_is_new = _add_or_get_inst(scoped_inst)
+                    if new_inst_is_new:
+                        new_insts[scoped_inst] = new_inst
+                    sel = InstSelector(
+                        m.value_utils.make_selector(sink.bit.value),
+                        sink.bit.ref.name)
+                    extracted_sink = sel.select(new_inst)
+                    extracted_sink @= driver
+                elif sink.bit.defn is not None:
+                    extracted_sink = node_to_bit.setdefault(sink, m.Bit())
+                    extracted_sink @= driver
+                    terminals.append(sink)
+                else:
+                    raise NotImplementedError(f"Unexpected sink {str(sink)}")
+        return new_insts
+
+    curr_neighbors = new_insts.copy()
+    for _ in range(opts.num_neighbors):
+        curr_neighbors = _expand_neighbors(curr_neighbors)
+
     return node_to_bit, roots, new_insts
 
+
 def _extract_from_terminals_impl(
-        ckt: m.DefineCircuitKind, terminals: List[BitPortNode]):
+        ckt: m.DefineCircuitKind,
+        terminals: List[BitPortNode],
+        opts: ExtractFromTerminalsOpts):
     node_to_bit, roots, new_insts = _process_graph(ckt, terminals)
 
 
@@ -282,13 +358,15 @@ def _extract_from_terminals_impl(
 def extract_from_terminals(
         ckt: m.DefineCircuitKind,
         terminals: List[BitPortNode],
-        name: Optional[str] = None) -> m.DefineCircuitKind:
+        name: Optional[str] = None,
+        **kwargs) -> m.DefineCircuitKind:
     name_ = name
     if name_ is None:
         name_ = f"{ckt.name}_Partial"
+    opts = ExtractFromTerminalsOpts(**kwargs)
 
     class _Partial(m.Circuit):
-        io = _extract_from_terminals_impl(ckt, terminals)
+        io = _extract_from_terminals_impl(ckt, terminals, opts)
         name = name_
 
     return _Partial
