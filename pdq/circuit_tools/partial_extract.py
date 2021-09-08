@@ -103,7 +103,7 @@ def _get_fanout_sinks(graph, node):
     return sinks
 
 
-def _process_graph(ckt, terminals):
+def _process_graph(ckt, terminals, opts):
     graph = SimpleDirectedGraphViewBase(ckt)
     node_to_bit = {}
     roots = []
@@ -272,7 +272,7 @@ def _extract_from_terminals_impl(
         ckt: m.DefineCircuitKind,
         terminals: List[BitPortNode],
         opts: ExtractFromTerminalsOpts):
-    node_to_bit, roots, new_insts = _process_graph(ckt, terminals)
+    node_to_bit, roots, new_insts = _process_graph(ckt, terminals, opts)
 
 
     def _make_grouped_ports(nodes, qualifier=None):
