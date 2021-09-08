@@ -163,6 +163,8 @@ class ScopedValue:
         return not self == other
 
     def __str__(self):
+        if self.value.const():
+            return str(self.value)
         if self.defn is not None:
             return f"{str(self.value)}"
         return f"{str(self.scope)}.{repr(self.value)}"

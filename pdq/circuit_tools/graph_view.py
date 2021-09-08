@@ -86,6 +86,12 @@ class SimpleDirectedGraphViewBase(DirectedGraphInterface):
             include_outgoing: bool) -> Iterable[BitPortNode]:
         if not (include_incoming or include_outgoing):
             return _empty()
+        if node.bit.value.const():
+            # NOTE(rsetaluri): Technically, constant values do have outgoing
+            # edges (to all the inputs they drive), but for now we do not
+            # consider such outgoing edges, although we do discover them from
+            # the other side (as incoming edges to inputs).
+            return _empty()
         # TODO(rsetaluri): Check that this node is contained in ckt.
         if node.bit.defn is not None:
             # We can safely assume that any neighbor will have the same scope as
