@@ -54,24 +54,6 @@ def _clk_type_name(T: m.Kind):
     raise NotImplementedError(T)
 
 
-def _group_nodes_by_root_port(nodes: Iterable[BitPortNode]):
-    groups = {}
-    for node in nodes:
-        # NOTE(rsetaluri): This if statement is a work-around, since
-        # `node.bit.ref.value()` doesn't work. In theory, it could, but magma
-        # needs to support it.
-        if node.bit.inst is not None:
-            ifc = node.bit.inst.interface
-        else:
-            assert node.bit.defn is not None
-            ifc = node.bit.defn.interface
-        _, port = _find_port_or_die(ifc, node.bit.ref.name)
-        key = ScopedValue(port, node.bit.scope)
-        group = groups.setdefault(key, [])
-        group.append(node)
-    return groups
-
-
 def _lift_extracted_bits_to_ports(bits, qualifier, namer):
     extracted_bit_to_lifted_port_name = {}
     ports = {}
@@ -268,55 +250,88 @@ def _process_graph(ckt, terminals, opts):
     return node_to_bit, roots, new_insts
 
 
+class _PortGrouper:
+    def __init__(self, node_to_bit):
+        self._groups = {}
+        self._node_to_bit = node_to_bit
+
+    def _group_nodes_by_root(self, nodes: Iterable[BitPortNode]):
+        for node in nodes:
+            # NOTE(rsetaluri): This if statement is a work-around, since
+            # `node.bit.ref.value()` doesn't work. In theory, it could, but
+            # magma needs to support it.
+            if node.bit.inst is not None:
+                ifc = node.bit.inst.interface
+            else:
+                assert node.bit.defn is not None
+                ifc = node.bit.defn.interface
+            _, port = _find_port_or_die(ifc, node.bit.ref.name)
+            key = ScopedValue(port, node.bit.scope)
+            group = self._groups.setdefault(key, [])
+            group.append(node)
+
+    def add(self, nodes: Iterable[BitPortNode]):
+        self._group_nodes_by_root(nodes)
+
+    def make_ports(self):
+        ports = {}
+        port_name_to_extracted_value = {}
+        for key, nodes in self._groups.items():
+            port_name = f"{str(key)}".replace(".", "_")
+            T = type(key.value)
+            assert T is not T.undirected_t  # debug check
+            # NOTE(rsetaluri): typed_value is only used as a proxy to get the
+            # direction below.
+            if key.defn is not None:
+                port_type = T.flip()
+                typed_value = T()
+            else:
+                assert key.inst is not None
+                port_type = T
+                typed_value = T.flip()()
+            assert port_name not in ports
+            ports[port_name] = port_type
+            extracted_value = port_type.undirected_t()
+            port_name_to_extracted_value[port_name] = extracted_value
+            for node in nodes:
+                sel = m.value_utils.make_selector(node.bit.value)
+                extracted_bit = sel.select(extracted_value)
+                typed_bit = sel.select(typed_value)
+                extracted_bit_of_node = self._node_to_bit[node]
+                if typed_bit.is_input():
+                    assert not extracted_bit.driven()
+                    extracted_bit @= extracted_bit_of_node
+                else:
+                    assert typed_bit.is_output()
+                    assert not extracted_bit_of_node.driven()
+                    extracted_bit_of_node @= extracted_bit
+        return ports, port_name_to_extracted_value
+
+
 def _extract_from_terminals_impl(
         ckt: m.DefineCircuitKind,
         terminals: List[BitPortNode],
         opts: ExtractFromTerminalsOpts):
     node_to_bit, roots, new_insts = _process_graph(ckt, terminals, opts)
 
+    port_grouper = _PortGrouper(node_to_bit)
+    port_grouper.add(roots)
+    port_grouper.add(terminals)
+    base_ports, base_port_name_to_extracted_value = port_grouper.make_ports()
 
-    def _make_grouped_ports(nodes, qualifier=None):
-        groups = _group_nodes_by_root_port(nodes)
-        ports = {}
-        port_name_to_extracted_value = {}
-        for key, nodes in groups.items():
-            port_name = f"{str(key)}".replace(".", "_")
-            T = type(key.value)
-            if qualifier is not None:
-                T = qualifier(T)
-            assert port_name not in ports
-            ports[port_name] = T
-            extracted_value = T.undirected_t()
-            port_name_to_extracted_value[port_name] = extracted_value
-            typed_value = T()  # only used as a proxy to get the direction below
-            for node in nodes:
-                sel = m.value_utils.make_selector(node.bit.value)
-                extracted_bit = sel.select(extracted_value)
-                typed_bit = sel.select(typed_value)
-                extracted_bit_of_node = node_to_bit[node]
-                if typed_bit.is_input():
-                    extracted_bit_of_node @= extracted_bit
-                else:
-                    assert typed_bit.is_output()
-                    extracted_bit @= extracted_bit_of_node
-        return ports, port_name_to_extracted_value
-
-
-    root_ports, root_port_name_to_extracted_value = (
-        _make_grouped_ports(roots, m.In))
-    terminal_ports, terminal_port_name_to_extracted_value = (
-        _make_grouped_ports(terminals, m.Out))
-
-
-    inputs_to_lift = []
-    inputs_to_lift += filter(
-        lambda b: not b.driven(),
-        _chain_values_as_bits(
-            *terminal_port_name_to_extracted_value.values()))
-    clk_ports = {}
     inst_bits = list(_chain_values_as_bits(
         *itertools.chain(
             *(inst.interface.ports.values() for inst in new_insts.values()))))
+    inputs_to_lift = []
+    for port_name, extracted_value in base_port_name_to_extracted_value.items():
+        typed_value = base_ports[port_name].flip()()
+        values_as_bits = zip(*map(m.as_bits, (typed_value, extracted_value)))
+        for typed_bit, extracted_bit in values_as_bits:
+            if typed_bit.is_output() or extracted_bit.driven():
+                continue
+            inputs_to_lift.append(extracted_bit)
+
+    clk_ports = {}
     for bit in filter(lambda b: b.is_input(), inst_bits):
         if isinstance(bit, m.ClockTypes):
             T = type(bit).undirected_t
@@ -335,17 +350,21 @@ def _extract_from_terminals_impl(
             outputs_to_lift, m.Out, lambda i, _: f"lifted_output_{i}"))
 
     io = m.IO(
-        **root_ports,
-        **terminal_ports,
+        **base_ports,
         **lifted_inputs,
         **lifted_outputs,
-        **clk_ports)
+        **clk_ports,
+    )
 
-    for port_name, value in root_port_name_to_extracted_value.items():
-        value @= getattr(io, port_name)
-    for port_name, value in terminal_port_name_to_extracted_value.items():
+    for port_name, value in base_port_name_to_extracted_value.items():
         port = getattr(io, port_name)
-        port @= value
+        assert type(port).undirected_t is type(value)
+        for port_bit, value_bit in zip(m.as_bits(port), m.as_bits(value)):
+            if port_bit.is_input():
+                port_bit @= value_bit
+            else:
+                assert port_bit.is_output()
+                value_bit @= port_bit
     for bit, port_name in extracted_bit_to_lifted_input_name.items():
         bit @= getattr(io, port_name)
     for bit, port_name in extracted_bit_to_lifted_output_name.items():

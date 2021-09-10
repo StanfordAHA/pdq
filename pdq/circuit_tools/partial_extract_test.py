@@ -64,3 +64,28 @@ def test_extract_from_terminals_neighbors(num_neighbors):
                 f"{num_neighbors}.v")
         assert m.testing.utils.check_files_equal(
             __file__, f"{basename}.v", gold)
+
+
+def test_extract_from_terminals_neighbors_mixed_direction_port():
+
+    class Ifc(m.Product):
+        x = m.In(m.Bit)
+        y = m.Out(m.Bit)
+
+    class _Foo(m.Circuit):
+        io = m.IO(ifc=Ifc, O=m.Out(m.Bit))
+        nx = ~io.ifc.x
+        io.ifc.y @= nx
+        io.O @= nx
+
+    ckt = _Foo
+    terminals = [BitPortNode(ScopedBit(ckt.O, Scope(ckt)))]
+    ckt_partial = extract_from_terminals(
+        ckt, terminals, num_neighbors=1)
+    with tempfile.TemporaryDirectory() as directory:
+        basename = f"{directory}/{ckt_partial.name}"
+        m.compile(basename, ckt_partial, inline=True)
+        gold = ("golds/partial_extract_extract_from_terminals_neighbors_mixed_"
+                "direction_port.v")
+        assert m.testing.utils.check_files_equal(
+            __file__, f"{basename}.v", gold)
