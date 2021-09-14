@@ -389,3 +389,26 @@ def extract_from_terminals(
         name = name_
 
     return _Partial
+
+
+def get_forward_terminals(
+        ckt: m.DefineCircuitKind,
+        bit: BitPortNode) -> List[BitPortNode]:
+    graph = SimpleDirectedGraphViewBase(ckt)
+    terminals = []
+    work = [bit]
+    seen = set()
+    while work:
+        curr = work.pop()
+        if curr in seen:
+            continue
+        seen.add(curr)
+        is_sink = (curr.bit.defn is not None or
+                   ((curr.bit.inst is not None) and
+                    (isinstance(type(curr.bit.inst), _CoreIRRegister))))
+        if is_sink:
+            terminals.append(curr)
+            continue
+        outgoing = graph.outgoing(curr)
+        work += list(outgoing)
+    return terminals
