@@ -126,14 +126,36 @@ def _process_graph(ckt, terminals, opts):
         extracted_bit @= extracted_reg_input_bit
 
 
+    def _visit_register_input(node):
+        assert node.bit.value.is_input()
+        key = ScopedInst(node.bit.inst, node.bit.scope)
+        extracted_reg, extracted_reg_is_new = _add_or_get_inst(key)
+        if extracted_reg_is_new:
+            for orig_reg_outupt_bit in node.bit.inst.O:
+                sel = m.value_utils.make_selector(orig_reg_outupt_bit)
+                orig_reg_outupt_bit_node = BitPortNode(
+                    ScopedBit(orig_reg_outupt_bit, node.bit.scope))
+                terminals.append(orig_reg_outupt_bit_node)
+                assert orig_reg_outupt_bit_node not in node_to_bit
+                extracted_bit = m.Bit()
+                node_to_bit[orig_reg_outupt_bit_node] = extracted_bit
+                sel = m.value_utils.make_selector(orig_reg_outupt_bit)
+                extracted_reg_output_bit = sel.select(extracted_reg.O)
+                extracted_bit @= extracted_reg_output_bit
+        sel = InstSelector(
+            m.value_utils.make_selector(node.bit.value), node.bit.ref.name)
+        extracted_reg_output_bit = sel.select(extracted_reg)
+        extracted_bit = node_to_bit[node]
+        extracted_bit @= extracted_reg_output_bit
+        if node in terminals:
+            terminals.remove(node)
+
+
     def _visit_register_port(node, flags):
         assert isinstance(type(node.bit.inst), _CoreIRRegister)
         if node.bit.value.is_input():
-            # TODO(rsetaluri): The logic below needs to be tested.
-            # if node not in terminals:
-            #     terminals.append(node)
-            # return
-            raise NotImplementedError()
+            _visit_register_input(node)
+            return
         assert node.bit.value.is_output()
         flags.is_register_output = True
         _visit_register_output(node)
@@ -277,7 +299,7 @@ class _PortGrouper:
         ports = {}
         port_name_to_extracted_value = {}
         for key, nodes in self._groups.items():
-            port_name = f"{str(key)}".replace(".", "_")
+            port_name = f"__{str(key)}".replace(".", "_")
             T = type(key.value)
             assert T is not T.undirected_t  # debug check
             # NOTE(rsetaluri): typed_value is only used as a proxy to get the

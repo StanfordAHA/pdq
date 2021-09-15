@@ -89,3 +89,49 @@ def test_extract_from_terminals_neighbors_mixed_direction_port():
                 "direction_port.v")
         assert m.testing.utils.check_files_equal(
             __file__, f"{basename}.v", gold)
+
+
+def test_extract_from_terminals_reg_in_terminal():
+
+    class _Foo(m.Circuit):
+        io = m.IO(
+            I0=m.In(m.Bits[2]),
+            O=m.Out(m.Bits[2]))
+        x = ~m.register(io.I0)
+        io.O @= m.register(x)
+
+    ckt = _Foo
+    terminals = [BitPortNode(ScopedBit(ckt.x[i], Scope(ckt))) for i in range(2)]
+
+    from pdq.circuit_tools.partial_extract import get_forward_terminals
+    new_terms = []
+    for term in terminals:
+        terms = get_forward_terminals(ckt, term)
+        for tt in terms:
+            new_terms.append(tt)
+    terminals = new_terms
+
+    ckt_partial = extract_from_terminals(ckt, terminals)
+
+    # partial = ckt_partial
+    # import subprocess
+    # import networkx as nx
+    # from pdq.circuit_tools.graph_view_utils import materialize_graph
+    # V, E = materialize_graph(partial)
+    # G = nx.DiGraph()
+    # G.add_nodes_from(V)
+    # G.add_edges_from(E)
+    # nx.drawing.nx_pydot.write_dot(G, f"{partial.name}.txt")
+    # subprocess.run(f"dot {partial.name}.txt -Tpdf > {partial.name}.pdf",
+    #                shell=True, check=True)
+    # #print (repr(ckt_partial))
+    m.compile("/tmp/tmp", ckt_partial, inline=True)
+    return
+
+
+    with tempfile.TemporaryDirectory() as directory:
+        basename = f"{directory}/{ckt_partial.name}"
+        m.compile(basename, ckt_partial, inline=True)
+        gold = "golds/partial_extract_extract_from_terminals_basic.v"
+        assert m.testing.utils.check_files_equal(
+            __file__, f"{basename}.v", gold)
