@@ -3,6 +3,7 @@ import dataclasses
 import logging
 import pathlib
 
+import magma as m
 from pdq.common.reporting import make_header
 from pdq.common.main_utils import (
     add_design_arguments, parse_design_args, slice_args, add_opt_arguments,
@@ -12,6 +13,9 @@ from pdq.report_parsing.parsers import parse_dc_area
 from pdq.report_parsing.parsers import parse_dc_timing
 from pdq.report_parsing.parsers import parse_ptpx_power
 from pdq.report_parsing.parsers import get_keyword_lines
+from pdq.circuit_tools.graph_view import BitPortNode
+from pdq.circuit_tools.partial_extract import extract_from_terminals
+from pdq.circuit_tools.signal_path import Scope, ScopedBit
 
 
 @dataclasses.dataclass
@@ -19,9 +23,14 @@ class _MainOpts:
     build_dir: str = "build/"
     skip_power: bool = False
     sweep_clock: bool = False
+    partial_endpoint: str = ""
 
 
 def _main(ckt, flow_opts: BasicFlowOpts, main_opts: _MainOpts):
+    if main_opts.partial_endpoint != "":
+        bits = list(m.as_bits(eval(main_opts.partial_endpoint)))
+        terms = [BitPortNode(ScopedBit(b, Scope(ckt))) for b in bits]
+        ckt = extract_from_terminals(ckt, terms)
     min_clock = 0
     max_clock = flow_opts.clock_period
     flow_opts = flow_opts if not main_opts.sweep_clock else dataclasses.replace(flow_opts,
