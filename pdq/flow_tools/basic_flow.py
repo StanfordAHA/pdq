@@ -20,6 +20,7 @@ class BasicFlowOpts:
     inline: bool = False
     adk_name: str = 'freepdk-45nm'
     macros: str = ""
+    constraints: str = ""
 
 
 def _get_macro_files(path):
@@ -70,6 +71,13 @@ def make_basic_flow(ckt: m.DefineCircuitKind, opts: BasicFlowOpts):
             FileCopy(
                 path,
                 builder.get_relative(f"macros/{os.path.basename(path)}")))
+
+    constraints_path = opts.constraints if opts.constraints else builder.get_relative("constraints.tcl")
+    builder.add_template(
+        FileCopy(
+            constraints_path,
+            builder.get_relative("constraints/constraints.tcl")))
+
 
     # TODO(rsetaluri,alexcarsello): Make pins non-design specific.
     builder.add_template(

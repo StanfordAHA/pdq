@@ -11,21 +11,46 @@ from pdq.flow_tools.basic_flow import BasicFlowOpts, make_basic_flow
 from pdq.report_parsing.parsers import parse_dc_area
 from pdq.report_parsing.parsers import parse_dc_timing
 from pdq.report_parsing.parsers import parse_ptpx_power
+from pdq.report_parsing.parsers import get_keyword_lines
 
 
 @dataclasses.dataclass
 class _MainOpts:
     build_dir: str = "build/"
     skip_power: bool = False
+    sweep_clock: bool = False
 
 
 def _main(ckt, flow_opts: BasicFlowOpts, main_opts: _MainOpts):
-    flow = make_basic_flow(ckt, flow_opts)
-    flow.build(pathlib.Path(main_opts.build_dir))
+    min_clock = 0
+    max_clock = flow_opts.clock_period
+    flow_opts = flow_opts if not main_opts.sweep_clock else dataclasses.replace(flow_opts,
+        clock_period=(min_clock+max_clock)/2)
+    terminate = not main_opts.sweep_clock
+    tried_clocks = []
+    while True:
+        tried_clocks.append(flow_opts.clock_period)
+        flow = make_basic_flow(ckt, flow_opts)
+        flow.build(pathlib.Path(main_opts.build_dir))
 
-    syn_step = flow.get_step("synopsys-dc-synthesis")
-    syn_step.run()
+        syn_step = flow.get_step("synopsys-dc-synthesis")
+        syn_step.run()
+        if terminate:
+            break
+        timing = syn_step.get_report(f"{ckt.name}.mapped.timing.setup.rpt")
+        has_violated = len(get_keyword_lines(timing, "VIOLATED")) > 0
+        if has_violated:
+            min_clock = flow_opts.clock_period
+        else:
+            max_clock = flow_opts.clock_period
+        flow_opts = dataclasses.replace(flow_opts, clock_period=(min_clock+max_clock)/2)
+        if flow_opts.clock_period < 1.2 * min_clock: # within 20%
+            terminate = True
+            flow_opts = dataclasses.replace(flow_opts, clock_period=min_clock)
+            if has_violated: # we just computed the result with min_clock, so break now
+                break
 
+    print("List of tried clocks: " + str(tried_clocks))
     area_report = parse_dc_area(
         syn_step.get_report(f"{ckt.name}.mapped.area.rpt"))
     print (make_header("AREA REPORT"))
