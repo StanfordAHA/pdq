@@ -25,6 +25,60 @@ class _MainOpts:
     sweep_clock: bool = False
     partial_endpoint: str = ""
 
+def parse_setup_rpt(lines):
+    paths = []
+    cur_path = []
+    in_path = False
+    hit_slack = True
+    last_cell = ""
+    for line in lines:
+        line = line.strip()
+        if in_path and "data arrival time" in line:
+            in_path = False
+            paths.append(cur_path)
+            cur_path = []
+        if in_path and not " (net)" in line and not "input external delay" in line:
+            name = line[:line.index(" (")]
+            cell = line[line.index("(") + 1:line.index(")")]
+            # every real cell has an entry for both the input port and output port; skip the output
+            if "_" in cell:
+                if cell == last_cell:
+                    last_cell = ""
+                    continue
+                else:
+                    last_cell = cell
+            split = list(filter(lambda x: x != '', line.split(" ")))
+            split.reverse() # look from the end
+            # index of "r" or "f" character
+            ref_idx = next(i for i, e in enumerate(split) if len(e) == 1)
+            try:
+                incr = float(split[ref_idx + 2])
+            except ValueError:
+                incr = float(split[ref_idx + 3]) # try the next one
+            cur_path.append((name, incr, cell))
+        if not in_path and not hit_slack and "slack" in line:
+            hit_slack = True # make sure we have really left the path
+        if not in_path and hit_slack and ("clock network delay" in line or "input external delay" in line):
+            in_path = True
+            hit_slack = False
+  
+    return paths
+
+# cross of size and buf/not buf
+def get_features(paths):
+    import itertools
+    features = []
+    for p in paths:
+        f = {(buf, size): 0 for (buf, size) in itertools.product((True, False), (1, 2, 4, 8, 16, 32))}
+        for _, _, cell in p:
+            if "_" not in cell:
+                continue
+            name, size = cell.split("_")
+            size = int(size[1:])
+            buf = (name == "BUF")
+            f[(buf, size)] += 1
+        features.append(f)
+    return features
 
 def _main(ckt, flow_opts: BasicFlowOpts, main_opts: _MainOpts):
     if main_opts.partial_endpoint != "":
@@ -37,29 +91,36 @@ def _main(ckt, flow_opts: BasicFlowOpts, main_opts: _MainOpts):
         clock_period=(min_clock+max_clock)/2)
     terminate = not main_opts.sweep_clock
     tried_clocks = []
+    feature_map = {}
     while True:
         tried_clocks.append(flow_opts.clock_period)
+        main_opts = dataclasses.replace(main_opts, build_dir=('build_' + str(flow_opts.clock_period)))
         flow = make_basic_flow(ckt, flow_opts)
         flow.build(pathlib.Path(main_opts.build_dir))
 
         syn_step = flow.get_step("synopsys-dc-synthesis")
         syn_step.run()
+        timing = syn_step.get_report(f"{ckt.name}.mapped.timing.setup.rpt")
+        feature_map[flow_opts.clock_period] = get_features(parse_setup_rpt(open(timing, 'r').readlines()))
         if terminate:
             break
-        timing = syn_step.get_report(f"{ckt.name}.mapped.timing.setup.rpt")
         has_violated = len(get_keyword_lines(timing, "VIOLATED")) > 0
         if has_violated:
             min_clock = flow_opts.clock_period
         else:
             max_clock = flow_opts.clock_period
         flow_opts = dataclasses.replace(flow_opts, clock_period=(min_clock+max_clock)/2)
-        if flow_opts.clock_period < 1.2 * min_clock: # within 20%
+        if flow_opts.clock_period < 1.05 * min_clock: # within 20%
             terminate = True
             flow_opts = dataclasses.replace(flow_opts, clock_period=min_clock)
             if has_violated: # we just computed the result with min_clock, so break now
                 break
 
     print("List of tried clocks: " + str(tried_clocks))
+    for (k, v) in feature_map.items():
+        print("Features for clock " + str(k))
+        for ff in v:
+            print(list(ff.values()))
     area_report = parse_dc_area(
         syn_step.get_report(f"{ckt.name}.mapped.area.rpt"))
     print (make_header("AREA REPORT"))

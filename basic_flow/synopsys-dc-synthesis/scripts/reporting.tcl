@@ -31,7 +31,7 @@ report_timing \
   -input_pins -capacitance -transition_time \
   -nets -significant_digits 4 -nosplit      \
   -path_type full_clock -attributes         \
-  -nworst 10 -max_paths 30 -delay_type max  \
+  -nworst 10 -max_paths 10 -sort_by slack -delay_type max  \
   > ${dc_reports_dir}/${dc_design_name}.mapped.timing.setup.rpt
 
 report_timing \
