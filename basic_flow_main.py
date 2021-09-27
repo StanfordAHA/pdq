@@ -40,13 +40,13 @@ def parse_setup_rpt(lines):
         if in_path and not " (net)" in line and not "input external delay" in line:
             name = line[:line.index(" (")]
             cell = line[line.index("(") + 1:line.index(")")]
-            # every real cell has an entry for both the input port and output port; skip the output
-            if "_" in cell:
-                if cell == last_cell:
-                    last_cell = ""
+            # every real cell has an entry for both the input port and output port; skip the input
+            if cell.count('_') == 1:
+                if cell != last_cell:
+                    last_cell = cell
                     continue
                 else:
-                    last_cell = cell
+                    last_cell = ""
             split = list(filter(lambda x: x != '', line.split(" ")))
             split.reverse() # look from the end
             # index of "r" or "f" character
@@ -55,6 +55,8 @@ def parse_setup_rpt(lines):
                 incr = float(split[ref_idx + 2])
             except ValueError:
                 incr = float(split[ref_idx + 3]) # try the next one
+            if incr == 0: # no actual delay through this element
+                continue
             cur_path.append((name, incr, cell))
         if not in_path and not hit_slack and "slack" in line:
             hit_slack = True # make sure we have really left the path
@@ -71,7 +73,7 @@ def get_features(paths):
     for p in paths:
         f = {(buf, size): 0 for (buf, size) in itertools.product((True, False), (1, 2, 4, 8, 16, 32))}
         for _, _, cell in p:
-            if "_" not in cell:
+            if cell.count('_') != 1:
                 continue
             name, size = cell.split("_")
             size = int(size[1:])
