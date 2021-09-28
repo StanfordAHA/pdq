@@ -46,7 +46,7 @@ def make_basic_flow(ckt: m.DefineCircuitKind, opts: BasicFlowOpts):
 
     macro_file_basenames = [os.path.basename(f) for f in macro_file_list]
                 
-    clk = m.wire_clock.get_default_clocks(ckt)[m.Clock]
+    clk = m.passes.clock.get_all_output_clocks_in_defn(ckt)[m.Clock]
     clk_name = clk if clk is None else f"'{clk.name.name}'"
     construct_opts = {
         "design_name": ckt.name,
