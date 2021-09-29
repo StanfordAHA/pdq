@@ -126,6 +126,18 @@ def _reaches_to(graph: Graph, dst: BitPortNode) -> Iterable[BitPortNode]:
         stack += list(graph.predecessors(curr))
 
 
+def _subgraph(graph: Graph, nodes: Iterable[BitPortNode]) -> Graph:
+    """
+    Returns a *consistently ordered* subgraph of @graph induced by the set of
+    nodes @nodes. Note that we can not use nx.Graph.subgraph since it has shown
+    to be non-deterministic in terms of subgraph node ordering.
+    """
+    subgraph = graph.copy()
+    nodes_set = set(nodes)
+    subgraph.remove_nodes_from(n for n in graph if n not in nodes_set)
+    return subgraph
+
+
 def _filter_graph(graph: Graph, query: PartialExtractQuery) -> Graph:
 
     def _filter(g, fn, l):
@@ -133,16 +145,16 @@ def _filter_graph(graph: Graph, query: PartialExtractQuery) -> Graph:
 
     if query.from_list:
         nodes = _filter(graph, _reachable_from, query.from_list)
-        graph = graph.subgraph(nodes)
+        graph = _subgraph(graph, nodes)
     if query.to_list:
         nodes = _filter(graph, _reaches_to, query.to_list)
-        graph = graph.subgraph(nodes)
+        graph = _subgraph(graph, nodes)
     if query.through_lists:
         for through_list in query.through_lists:
             nodes = itertools.chain(
                 _filter(graph, _reaches_to, through_list),
                 _filter(graph, _reachable_from, through_list))
-            graph = graph.subgraph(nodes)
+            graph = _subgraph(graph, nodes)
     return graph
 
 
@@ -187,10 +199,7 @@ def _reconstruct_circuit(graph: Graph, name: str) -> m.DefineCircuitKind:
     reconstructor = _CircuitReconstructor(graph)
 
     def _make_terminals(fn, g):
-        terminals = filter(lambda n: fn(g, n), g.nodes)
-        # NOTE(rsetaluri): We need to sort these by something consistent like
-        # str() to ensure determinsticness across runs.
-        return list(sorted(terminals, key=str))
+        return list(filter(lambda n: fn(g, n), g.nodes))
 
     pi = _make_terminals(lambda g, n: g.in_degree(n) == 0, graph)
     po = _make_terminals(lambda g, n: g.out_degree(n) == 0, graph)
