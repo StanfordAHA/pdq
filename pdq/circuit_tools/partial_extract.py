@@ -1,7 +1,7 @@
 import dataclasses
 import itertools
 import networkx as nx
-from typing import Iterable, Optional
+from typing import Iterable, List, Optional, Tuple
 
 import magma as m
 
@@ -147,25 +147,40 @@ def _filter_graph(graph: Graph, query: PartialExtractQuery) -> Graph:
 
 
 def _lift_instance_inputs(
-        reconstructor: _CircuitReconstructor) -> Iterable[BitPortNode]:
+        reconstructor: _CircuitReconstructor) -> (
+            Tuple[List[BitPortNode], List[BitPortNode]]):
+    pi = []
+    po = []
     for scoped_inst, inst in reconstructor.instance_map.items():
         for port in scoped_inst.inst.interface.ports.values():
             for bit in m.as_bits(port):
-                if bit.is_output() or isinstance(bit, m.ClockTypes):
-                    continue
                 node = BitPortNode(ScopedBit(bit, scoped_inst.scope))
-                if node in reconstructor.node_to_bit:
-                    assert reconstructor.node_to_bit[node].driven()
-                    continue
-                assert node not in reconstructor.node_to_bit
-                new_bit = reconstructor.add_or_get_bit(node)
                 sel = InstSelector(
                     m.value_utils.make_selector(node.bit.value),
                     node.bit.ref.name)
-                inst_bit = sel.select(inst)
-                assert not inst_bit.driven()
-                inst_bit @= new_bit
-                yield node
+                if bit.is_input():
+                    if isinstance(bit, m.ClockTypes):
+                        continue
+                    if node in reconstructor.node_to_bit:
+                        assert reconstructor.node_to_bit[node].driven()
+                        continue
+                    assert node not in reconstructor.node_to_bit
+                    new_bit = reconstructor.add_or_get_bit(node)
+                    inst_bit = sel.select(inst)
+                    assert not inst_bit.driven()
+                    inst_bit @= new_bit
+                    pi.append(node)
+                elif bit.is_output():
+                    if node in reconstructor.node_to_bit:
+                        continue
+                    new_bit = reconstructor.add_or_get_bit(node)
+                    inst_bit = sel.select(inst)
+                    assert not inst_bit.driving()
+                    new_bit @= inst_bit
+                    po.append(node)
+                else:
+                    raise NotImplementedError(bit, type(bit))
+    return pi, po
 
 
 def _reconstruct_circuit(graph: Graph, name: str) -> m.DefineCircuitKind:
@@ -184,8 +199,11 @@ def _reconstruct_circuit(graph: Graph, name: str) -> m.DefineCircuitKind:
 
     class _Partial(m.Circuit):
         nonlocal pi
+        nonlocal po
         reconstructor.run()
-        pi += list(_lift_instance_inputs(reconstructor))
+        new_pi, new_po = _lift_instance_inputs(reconstructor)
+        pi += new_pi
+        po += new_po
 
         io =  m.IO(**{f"I{i}":  m.In(type(v.bit.value))
                       for i, v in enumerate(pi)})
