@@ -1,4 +1,4 @@
-from typing import Any, Callable, Iterable
+from typing import Any, Callable, Iterable, List
 
 
 def only(lst: Iterable):
@@ -34,3 +34,8 @@ def try_call(fn: Callable[[], Any], ExceptionType: Any):
         pass
     else:
         return ret
+
+
+def remove_all(l: List, to_remove: Iterable):
+    for ii in to_remove:
+        l.remove(ii)

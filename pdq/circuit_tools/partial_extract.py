@@ -12,6 +12,7 @@ from pdq.circuit_tools.graph_view_utils import materialize_graph
 from pdq.circuit_tools.partial_extract_query import (
     PartialExtractQuery, query_is_empty)
 from pdq.circuit_tools.signal_path import Scope, ScopedBit, ScopedValue
+from pdq.common.algorithms import only, remove_all
 
 
 Graph = nx.DiGraph
@@ -43,7 +44,6 @@ class _CircuitReconstructor:
         self._instance_map = {}
 
     def find_node(self, bit: m.Bit) -> BitPortNode:
-        from pdq.common.algorithms import only
         node_to_bit = {n: b for n, b in self._node_to_bit.items() if b is bit}
         n, b = only(node_to_bit.items())
         assert b is bit
@@ -195,6 +195,41 @@ def _lift_instance_inputs(
     return pi, po
 
 
+def _is_register_input(node: BitPortNode) -> bool:
+    from magma.primitives.register import _CoreIRRegister
+    if not node.bit.value.is_output():
+        return False
+    inst = node.bit.inst
+    if inst is None:
+        return False
+    defn = type(inst)
+    if not m.isprimitive(defn):
+        return False
+    if not isinstance(defn, _CoreIRRegister):
+        return False
+    return True
+
+
+def _add_input_registers(
+        graph: Graph,
+        reconstructor: _CircuitReconstructor) -> List[BitPortNode]:
+    pi_to_remove = []
+    for node in graph.nodes:
+        if not _is_register_input(node):
+            continue
+        scoped_inst = ScopedInst(node.bit.inst, node.bit.scope)
+        assert node not in reconstructor.instance_map
+        inst = reconstructor.add_or_get_instance(scoped_inst)
+        sel = InstSelector(
+            m.value_utils.make_selector(node.bit.value),
+            node.bit.ref.name)
+        inst_bit = sel.select(inst)
+        bit = reconstructor.get_bit(node)
+        bit @= inst_bit
+        pi_to_remove.append(node)
+    return pi_to_remove
+
+
 def _reconstruct_circuit(graph: Graph, name: str) -> m.DefineCircuitKind:
     reconstructor = _CircuitReconstructor(graph)
 
@@ -210,6 +245,8 @@ def _reconstruct_circuit(graph: Graph, name: str) -> m.DefineCircuitKind:
         nonlocal pi
         nonlocal po
         reconstructor.run()
+        pi_to_remove = _add_input_registers(graph, reconstructor)
+        remove_all(pi, pi_to_remove)
         new_pi, new_po = _lift_instance_inputs(reconstructor)
         pi += new_pi
         po += new_po
