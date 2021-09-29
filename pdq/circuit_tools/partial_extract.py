@@ -49,6 +49,14 @@ class _CircuitReconstructor:
         assert b is bit
         return n
 
+    @property
+    def node_to_bit(self):
+        return self._node_to_bit
+
+    @property
+    def instance_map(self):
+        return self._instance_map
+
     def add_or_get_bit(self, key: BitPortNode) -> m.Bit:
         return self._node_to_bit.setdefault(key, m.Bit())
 
@@ -138,6 +146,28 @@ def _filter_graph(graph: Graph, query: PartialExtractQuery) -> Graph:
     return graph
 
 
+def _lift_instance_inputs(
+        reconstructor: _CircuitReconstructor) -> Iterable[BitPortNode]:
+    for scoped_inst, inst in reconstructor.instance_map.items():
+        for port in scoped_inst.inst.interface.ports.values():
+            for bit in m.as_bits(port):
+                if bit.is_output() or isinstance(bit, m.ClockTypes):
+                    continue
+                node = BitPortNode(ScopedBit(bit, scoped_inst.scope))
+                if node in reconstructor.node_to_bit:
+                    assert reconstructor.node_to_bit[node].driven()
+                    continue
+                assert node not in reconstructor.node_to_bit
+                new_bit = reconstructor.add_or_get_bit(node)
+                sel = InstSelector(
+                    m.value_utils.make_selector(node.bit.value),
+                    node.bit.ref.name)
+                inst_bit = sel.select(inst)
+                assert not inst_bit.driven()
+                inst_bit @= new_bit
+                yield node
+
+
 def _reconstruct_circuit(graph: Graph, name: str) -> m.DefineCircuitKind:
     reconstructor = _CircuitReconstructor(graph)
 
@@ -151,9 +181,12 @@ def _reconstruct_circuit(graph: Graph, name: str) -> m.DefineCircuitKind:
     po = _make_terminals(lambda g, n: g.out_degree(n) == 0, graph)
     _name = name
 
+
     class _Partial(m.Circuit):
-        _ignore_undriven_ = True
+        nonlocal pi
         reconstructor.run()
+        pi += list(_lift_instance_inputs(reconstructor))
+
         io =  m.IO(**{f"I{i}":  m.In(type(v.bit.value))
                       for i, v in enumerate(pi)})
         io += m.IO(**{f"O{i}": m.Out(type(v.bit.value))
@@ -167,8 +200,6 @@ def _reconstruct_circuit(graph: Graph, name: str) -> m.DefineCircuitKind:
             bit = reconstructor.get_bit(pio)
             port @= bit
         name = _name
-
-    m.passes.drive_undriven.DriveUndrivenPass(_Partial).run()
 
     return _Partial
 
