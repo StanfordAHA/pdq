@@ -47,6 +47,8 @@ def _get_coreir_op_drivers(ckt, name, sel):
     if ckt.coreir_lib == "corebit":
         assert type(sel) is m.value_utils.Selector
         assert sel.child is None
+        if op_name == "undriven":
+            return []
         if op_name == "not":
             return [ckt.I]
         return [ckt.I0, ckt.I1]

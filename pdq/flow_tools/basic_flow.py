@@ -18,8 +18,10 @@ class BasicFlowOpts:
     clock_period: float = 2.0
     explore: bool = False
     inline: bool = False
+    flatten: bool = False
     adk_name: str = 'freepdk-45nm'
     macros: str = ""
+    constraints: str = ""
 
 
 def _get_macro_files(path):
@@ -55,6 +57,7 @@ def make_basic_flow(ckt: m.DefineCircuitKind, opts: BasicFlowOpts):
         "explore": opts.explore,
         "adk_name": opts.adk_name,
         "macro_files": macro_file_basenames,
+        "flatten_effort": 3 if opts.flatten else 0
     }
     builder = TemplatedFlowBuilder()
     builder.set_flow_dir(_BASIC_FLOW_FLOW_DIR)
@@ -70,6 +73,13 @@ def make_basic_flow(ckt: m.DefineCircuitKind, opts: BasicFlowOpts):
             FileCopy(
                 path,
                 builder.get_relative(f"macros/{os.path.basename(path)}")))
+
+    constraints_path = opts.constraints if opts.constraints else builder.get_relative("constraints.tcl")
+    builder.add_template(
+        FileCopy(
+            constraints_path,
+            builder.get_relative("constraints/constraints.tcl")))
+
 
     # TODO(rsetaluri,alexcarsello): Make pins non-design specific.
     builder.add_template(
