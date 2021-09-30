@@ -163,35 +163,40 @@ def _lift_instance_inputs(
             Tuple[List[BitPortNode], List[BitPortNode]]):
     pi = []
     po = []
+
+    def _process_value(value, scoped_inst, inst):
+        node = BitPortNode(ScopedBit(value, scoped_inst.scope))
+        sel = InstSelector(
+            m.value_utils.make_selector(node.bit.value),
+            node.bit.ref.name)
+        if value.is_input():
+            if isinstance(value, m.ClockTypes):
+                return
+            if node in reconstructor.node_to_bit:
+                assert reconstructor.node_to_bit[node].driven()
+                return
+            assert node not in reconstructor.node_to_bit
+            new_value = reconstructor.add_or_get_bit(node)
+            inst_value = sel.select(inst)
+            assert not inst_value.driven()
+            inst_value @= new_value
+            pi.append(node)
+        elif value.is_output():
+            if node in reconstructor.node_to_bit:
+                return
+            new_value = reconstructor.add_or_get_bit(node)
+            inst_value = sel.select(inst)
+            assert not inst_value.driving()
+            new_value @= inst_value
+            po.append(node)
+        else:
+            raise NotImplementedError(value, type(value))
+
     for scoped_inst, inst in reconstructor.instance_map.items():
         for port in scoped_inst.inst.interface.ports.values():
             for bit in m.as_bits(port):
-                node = BitPortNode(ScopedBit(bit, scoped_inst.scope))
-                sel = InstSelector(
-                    m.value_utils.make_selector(node.bit.value),
-                    node.bit.ref.name)
-                if bit.is_input():
-                    if isinstance(bit, m.ClockTypes):
-                        continue
-                    if node in reconstructor.node_to_bit:
-                        assert reconstructor.node_to_bit[node].driven()
-                        continue
-                    assert node not in reconstructor.node_to_bit
-                    new_bit = reconstructor.add_or_get_bit(node)
-                    inst_bit = sel.select(inst)
-                    assert not inst_bit.driven()
-                    inst_bit @= new_bit
-                    pi.append(node)
-                elif bit.is_output():
-                    if node in reconstructor.node_to_bit:
-                        continue
-                    new_bit = reconstructor.add_or_get_bit(node)
-                    inst_bit = sel.select(inst)
-                    assert not inst_bit.driving()
-                    new_bit @= inst_bit
-                    po.append(node)
-                else:
-                    raise NotImplementedError(bit, type(bit))
+                _process_value(bit, scoped_inst, inst)
+
     return pi, po
 
 
