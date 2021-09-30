@@ -18,6 +18,7 @@ class BasicFlowOpts:
     clock_period: float = 2.0
     explore: bool = False
     inline: bool = False
+    flatten: bool = False
     adk_name: str = 'freepdk-45nm'
     macros: str = ""
     constraints: str = ""
@@ -56,6 +57,7 @@ def make_basic_flow(ckt: m.DefineCircuitKind, opts: BasicFlowOpts):
         "explore": opts.explore,
         "adk_name": opts.adk_name,
         "macro_files": macro_file_basenames,
+        "flatten_effort": 3 if opts.flatten else 0
     }
     builder = TemplatedFlowBuilder()
     builder.set_flow_dir(_BASIC_FLOW_FLOW_DIR)

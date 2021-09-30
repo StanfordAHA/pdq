@@ -2,6 +2,7 @@ import argparse
 import dataclasses
 import logging
 import pathlib
+import os
 
 import magma as m
 from pdq.common.reporting import make_header
@@ -14,7 +15,6 @@ from pdq.report_parsing.parsers import parse_dc_timing
 from pdq.report_parsing.parsers import parse_ptpx_power
 from pdq.report_parsing.parsers import get_keyword_lines
 from pdq.circuit_tools.graph_view import BitPortNode
-from pdq.circuit_tools.partial_extract import extract_from_terminals
 from pdq.circuit_tools.signal_path import Scope, ScopedBit
 
 
@@ -23,7 +23,6 @@ class _MainOpts:
     build_dir: str = "build/"
     skip_power: bool = False
     sweep_clock: bool = False
-    partial_endpoint: str = ""
 
 def parse_setup_rpt(lines):
     paths = []
@@ -83,10 +82,6 @@ def get_features(paths):
     return features
 
 def _main(ckt, flow_opts: BasicFlowOpts, main_opts: _MainOpts):
-    if main_opts.partial_endpoint != "":
-        bits = list(m.as_bits(eval(main_opts.partial_endpoint)))
-        terms = [BitPortNode(ScopedBit(b, Scope(ckt))) for b in bits]
-        ckt = extract_from_terminals(ckt, terms)
     min_clock = 0
     max_clock = flow_opts.clock_period
     flow_opts = flow_opts if not main_opts.sweep_clock else dataclasses.replace(flow_opts,
@@ -94,9 +89,10 @@ def _main(ckt, flow_opts: BasicFlowOpts, main_opts: _MainOpts):
     terminate = not main_opts.sweep_clock
     tried_clocks = []
     feature_map = {}
+    build_dir_prefix = os.path.normpath(main_opts.build_dir)
     while True:
         tried_clocks.append(flow_opts.clock_period)
-        main_opts = dataclasses.replace(main_opts, build_dir=('build_' + str(flow_opts.clock_period)))
+        main_opts = dataclasses.replace(main_opts, build_dir=(build_dir_prefix + '_' + str(flow_opts.clock_period)))
         flow = make_basic_flow(ckt, flow_opts)
         flow.build(pathlib.Path(main_opts.build_dir))
 

@@ -34,7 +34,7 @@ def construct():
     'topographical'  : True,
     'explore'        : {{ explore }},
     'strip_path'     : f"{tb_name}/dut",
-    'flatten_effort' : 0
+    'flatten_effort' : {{ flatten_effort }}
   }
 
   #-----------------------------------------------------------------------
