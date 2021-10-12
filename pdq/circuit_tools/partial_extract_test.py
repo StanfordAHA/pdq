@@ -3,14 +3,17 @@ import tempfile
 import magma as m
 import magma.testing
 
+from pdq.circuit_tools.circuit_utils import find_instances_name_equals
 from pdq.circuit_tools.graph_view import BitPortNode
 from pdq.circuit_tools.partial_extract import extract_partial
 from pdq.circuit_tools.partial_extract_query import (
     PartialExtractQuery, query_is_empty)
 from pdq.circuit_tools.signal_path import Scope, ScopedBit
+from pdq.common.algorithms import only
 
 
-class _Foo(m.Circuit):
+class _Basic(m.Circuit):
+    name = "Basic"
     io = m.IO(
         I0=m.In(m.Bits[2]),
         I1=m.In(m.Bits[2]),
@@ -23,19 +26,44 @@ class _Foo(m.Circuit):
     io.O[3] @= io.I2
 
 
-m.passes.clock.WireClockPass(_Foo).run()
+class _Registered(m.Circuit):
+    name = "Registered"
+    io = m.IO(I=m.In(m.Bit), O=m.Out(m.Bit))
+    io.O @= m.register(~m.register(io.I, name="reg0"), name="reg1")
+
+
+m.passes.clock.WireClockPass(_Basic).run()
+m.passes.clock.WireClockPass(_Registered).run()
 
 
 def test_basic():
-    ckt = _Foo
+    ckt = _Basic
     to_list = tuple(ScopedBit(o, Scope(ckt)) for o in ckt.O[:2])
     q = PartialExtractQuery(to_list=to_list)
     assert not query_is_empty(q)
-    ckt_partial = extract_partial(ckt, q)
+    ckt_partial = extract_partial(ckt, q, name="basic_partial")
 
     with tempfile.TemporaryDirectory() as directory:
         basename = f"{directory}/{ckt_partial.name}"
         m.compile(basename, ckt_partial, inline=True)
         gold = "golds/partial_extract_basic.v"
+        assert m.testing.utils.check_files_equal(
+            __file__, f"{basename}.v", gold)
+
+
+def test_output_register():
+    ckt = _Registered
+    reg0 = only(find_instances_name_equals(ckt, "reg0"))
+    reg1 = only(find_instances_name_equals(ckt, "reg1"))
+    scope = Scope(ckt)
+    through_lists = ((ScopedBit(reg0.O, scope),), (ScopedBit(reg1.I, scope),))
+    q = PartialExtractQuery(through_lists=through_lists)
+    assert not query_is_empty(q)
+    ckt_partial = extract_partial(ckt, q, name="output_register_partial")
+
+    with tempfile.TemporaryDirectory() as directory:
+        basename = f"{directory}/{ckt_partial.name}"
+        m.compile(basename, ckt_partial, inline=True)
+        gold = "golds/partial_extract_output_register.v"
         assert m.testing.utils.check_files_equal(
             __file__, f"{basename}.v", gold)

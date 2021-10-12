@@ -16,7 +16,7 @@ module coreir_reg #(
   assign out = outReg;
 endmodule
 
-module _Foo_Partial (
+module basic_partial (
     input I0,
     input I1,
     input I2,
@@ -31,36 +31,36 @@ module _Foo_Partial (
     output O4,
     input CLK
 );
-wire [1:0] _Foo_Register_inst0_reg_P2_inst0_out;
-wire [1:0] _Foo_Register_inst1_reg_P2_inst0_out;
-wire [1:0] _Foo_magma_Bits_2_or_inst0_out;
-wire [1:0] _Foo_Register_inst0_reg_P2_inst0_in;
-assign _Foo_Register_inst0_reg_P2_inst0_in = {I4,I3};
+wire [1:0] Basic_Register_inst0_reg_P2_inst0_out;
+wire [1:0] Basic_Register_inst1_reg_P2_inst0_out;
+wire [1:0] Basic_magma_Bits_2_or_inst0_out;
+wire [1:0] Basic_Register_inst0_reg_P2_inst0_in;
+assign Basic_Register_inst0_reg_P2_inst0_in = {I4,I3};
 coreir_reg #(
     .clk_posedge(1'b1),
     .init(2'h0),
     .width(2)
-) _Foo_Register_inst0_reg_P2_inst0 (
+) Basic_Register_inst0_reg_P2_inst0 (
     .clk(CLK),
-    .in(_Foo_Register_inst0_reg_P2_inst0_in),
-    .out(_Foo_Register_inst0_reg_P2_inst0_out)
+    .in(Basic_Register_inst0_reg_P2_inst0_in),
+    .out(Basic_Register_inst0_reg_P2_inst0_out)
 );
-wire [1:0] _Foo_Register_inst1_reg_P2_inst0_in;
-assign _Foo_Register_inst1_reg_P2_inst0_in = {I6,I5};
+wire [1:0] Basic_Register_inst1_reg_P2_inst0_in;
+assign Basic_Register_inst1_reg_P2_inst0_in = {I6,I5};
 coreir_reg #(
     .clk_posedge(1'b1),
     .init(2'h0),
     .width(2)
-) _Foo_Register_inst1_reg_P2_inst0 (
+) Basic_Register_inst1_reg_P2_inst0 (
     .clk(CLK),
-    .in(_Foo_Register_inst1_reg_P2_inst0_in),
-    .out(_Foo_Register_inst1_reg_P2_inst0_out)
+    .in(Basic_Register_inst1_reg_P2_inst0_in),
+    .out(Basic_Register_inst1_reg_P2_inst0_out)
 );
-assign _Foo_magma_Bits_2_or_inst0_out = ({I1,_Foo_Register_inst0_reg_P2_inst0_out[0]}) | ({I2,_Foo_Register_inst1_reg_P2_inst0_out[0]});
-assign O0 = _Foo_magma_Bits_2_or_inst0_out[0];
+assign Basic_magma_Bits_2_or_inst0_out = ({I1,Basic_Register_inst0_reg_P2_inst0_out[0]}) | ({I2,Basic_Register_inst1_reg_P2_inst0_out[0]});
+assign O0 = Basic_magma_Bits_2_or_inst0_out[0];
 assign O1 = ~ I0;
-assign O2 = _Foo_magma_Bits_2_or_inst0_out[1];
-assign O3 = _Foo_Register_inst0_reg_P2_inst0_out[1];
-assign O4 = _Foo_Register_inst1_reg_P2_inst0_out[1];
+assign O2 = Basic_magma_Bits_2_or_inst0_out[1];
+assign O3 = Basic_Register_inst0_reg_P2_inst0_out[1];
+assign O4 = Basic_Register_inst1_reg_P2_inst0_out[1];
 endmodule
 

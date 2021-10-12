@@ -1,7 +1,7 @@
 import dataclasses
 import itertools
 import networkx as nx
-from typing import Iterable, List, Optional, Tuple
+from typing import Callable, Iterable, List, Optional, Tuple
 
 import magma as m
 
@@ -200,9 +200,11 @@ def _lift_instance_inputs(
     return pi, po
 
 
-def _is_register_input(node: BitPortNode) -> bool:
+def _is_register_port(
+        node: BitPortNode,
+        value_predicate: Optional[Callable[[m.Type], bool]] = None) -> bool:
     from magma.primitives.register import _CoreIRRegister
-    if not node.bit.value.is_output():
+    if value_predicate is not None and not value_predicate(node.bit.value):
         return False
     inst = node.bit.inst
     if inst is None:
@@ -213,6 +215,14 @@ def _is_register_input(node: BitPortNode) -> bool:
     if not isinstance(defn, _CoreIRRegister):
         return False
     return True
+
+
+def _is_register_input(node: BitPortNode) -> bool:
+    return _is_register_port(node, lambda v: v.is_output())
+
+
+def _is_register_output(node: BitPortNode) -> bool:
+    return _is_register_port(node, lambda v: v.is_input())
 
 
 def _add_input_registers(
@@ -241,8 +251,11 @@ def _reconstruct_circuit(graph: Graph, name: str) -> m.DefineCircuitKind:
     def _make_terminals(fn, g):
         return list(filter(lambda n: fn(g, n), g.nodes))
 
+    def _is_po(g, n):
+        return g.out_degree(n) == 0 and (not _is_register_output(n))
+
     pi = _make_terminals(lambda g, n: g.in_degree(n) == 0, graph)
-    po = _make_terminals(lambda g, n: g.out_degree(n) == 0, graph)
+    po = _make_terminals(_is_po, graph)
     _name = name
 
 
