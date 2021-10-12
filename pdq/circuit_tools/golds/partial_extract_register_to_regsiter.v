@@ -16,7 +16,7 @@ module coreir_reg #(
   assign out = outReg;
 endmodule
 
-module output_register_partial (
+module register_to_regsiter_partial (
     input I0,
     output O0,
     input CLK

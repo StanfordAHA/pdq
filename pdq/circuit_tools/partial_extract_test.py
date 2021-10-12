@@ -51,7 +51,7 @@ def test_basic():
             __file__, f"{basename}.v", gold)
 
 
-def test_output_register():
+def test_register_to_register():
     ckt = _Registered
     reg0 = only(find_instances_name_equals(ckt, "reg0"))
     reg1 = only(find_instances_name_equals(ckt, "reg1"))
@@ -59,11 +59,29 @@ def test_output_register():
     through_lists = ((ScopedBit(reg0.O, scope),), (ScopedBit(reg1.I, scope),))
     q = PartialExtractQuery(through_lists=through_lists)
     assert not query_is_empty(q)
-    ckt_partial = extract_partial(ckt, q, name="output_register_partial")
+    ckt_partial = extract_partial(ckt, q, name="register_to_regsiter_partial")
 
     with tempfile.TemporaryDirectory() as directory:
         basename = f"{directory}/{ckt_partial.name}"
         m.compile(basename, ckt_partial, inline=True)
-        gold = "golds/partial_extract_output_register.v"
+        gold = "golds/partial_extract_register_to_regsiter.v"
+        assert m.testing.utils.check_files_equal(
+            __file__, f"{basename}.v", gold)
+
+
+def test_io_to_register():
+    ckt = _Registered
+    reg0 = only(find_instances_name_equals(ckt, "reg0"))
+    scope = Scope(ckt)
+    from_list = (ScopedBit(ckt.I, scope),)
+    through_lists = ((ScopedBit(reg0.I, scope),),)
+    q = PartialExtractQuery(from_list=from_list, through_lists=through_lists)
+    assert not query_is_empty(q)
+    ckt_partial = extract_partial(ckt, q, name="io_to_regsiter_partial")
+
+    with tempfile.TemporaryDirectory() as directory:
+        basename = f"{directory}/{ckt_partial.name}"
+        m.compile(basename, ckt_partial, inline=True)
+        gold = "golds/partial_extract_io_to_register.v"
         assert m.testing.utils.check_files_equal(
             __file__, f"{basename}.v", gold)
