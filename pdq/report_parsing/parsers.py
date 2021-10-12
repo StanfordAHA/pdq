@@ -94,4 +94,52 @@ def parse_ptpx_power(report_name):
         hierarchy = hierarchy[0:depth + 1]
         hier_name = '/'.join(hierarchy)
         power_dict[hier_name] = _create_power_dict(internal, switch, leak)
-    return power_dict 
+    return power_dict
+
+
+def _parse_dc_timing_full_impl(lines):
+    paths = []
+    cur_path = []
+    in_path = False
+    hit_slack = True
+    last_cell = ""
+    for line in lines:
+        line = line.strip()
+        if in_path and "data arrival time" in line:
+            in_path = False
+            paths.append(cur_path)
+            cur_path = []
+        if in_path and not " (net)" in line and not "input external delay" in line:
+            name = line[:line.index(" (")]
+            cell = line[line.index("(") + 1:line.index(")")]
+            # every real cell has an entry for both the input port and output port; skip the input
+            if cell.count('_') == 1:
+                if cell != last_cell:
+                    last_cell = cell
+                    continue
+                else:
+                    last_cell = ""
+            split = list(filter(lambda x: x != '', line.split(" ")))
+            split.reverse() # look from the end
+            # index of "r" or "f" character
+            ref_idx = next(i for i, e in enumerate(split) if len(e) == 1)
+            try:
+                incr = float(split[ref_idx + 2])
+            except ValueError:
+                incr = float(split[ref_idx + 3]) # try the next one
+            if incr == 0: # no actual delay through this element
+                continue
+            cur_path.append((name, incr, cell))
+        if not in_path and not hit_slack and "slack" in line:
+            hit_slack = True # make sure we have really left the path
+        if not in_path and hit_slack and ("clock network delay" in line or "input external delay" in line):
+            in_path = True
+            hit_slack = False
+
+    return paths
+
+
+def parse_dc_timing_full(filename):
+    with open(filename, "r") as f:
+        lines = f.readlines()
+        return _parse_dc_timing_full_impl(lines)
