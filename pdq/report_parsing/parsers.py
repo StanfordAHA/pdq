@@ -52,16 +52,19 @@ def get_keyword_lines(report_name, keyword):
 # Value = Slack
 
 def parse_dc_timing(report_name):
-    tags = [("Startpoint: ", 1), ("Endpoint: ", 1), ("slack (", 2)]
+    tags = [("Startpoint: ", 1), ("Endpoint: ", 1), ("slack (", 2), ("data arrival time", 3),]
     keywords = {}
     for tag in tags:
         lines = get_keyword_lines(report_name, tag[0])
         keywords[tag[0]] = [line.split()[tag[1]] for line in lines]
+    keywords["data arrival time"] = keywords["data arrival time"][::2]
     slack_tuples = list(zip(*[keywords[tag[0]] for tag in tags]))
-    return {k1 : {k2: v} for k1, k2, v in slack_tuples}
+    return slack_tuples
+
 
 def _create_power_dict(internal, switch, leak):
     return {'int': internal, 'switch': switch, 'leak': leak}
+
 
 # Function to create Python dict from ptpx power report
 # Key1 = hierarchical instance name
