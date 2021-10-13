@@ -79,6 +79,14 @@ class SimpleFeatureSet(FeatureSetInterface):
             count_type = "total"
             assert (gate_type, count_type) in self._features
             self._features[(gate_type, count_type)] += 1
+        for gate_type in SimpleFeatureSet.KEYS["gate_type"]:
+            total = self._features[(gate_type, "total")]
+            if total == 0:
+                continue
+            total = float(total)
+            for count_type in SimpleFeatureSet.KEYS["count_type"][:-1]:
+                key = gate_type, count_type
+                self._features[key] = float(self._features[key]) / total
 
     def as_dict(self) -> Dict[Any, Numeric]:
         return self._features.copy()
@@ -124,7 +132,11 @@ def get_examples_from_clock_sweep(
             parse_dc_timing(rpt_filename),
             parse_dc_timing_full(rpt_filename)))
         for i, ((_, _, slack, data_arrival_time), path) in enumerate(rpt):
-            slack, data_arrival_time = map(float, (slack, data_arrival_time))
+            data_arrival_time = float(data_arrival_time)
+            try:
+                slack = float(slack)
+            except ValueError:
+                slack = -.00001  # hack
             gates = path_to_gate_list(path)
             feature_set = SimpleFeatureSet()
             feature_set.populate_from_gates(gates)
