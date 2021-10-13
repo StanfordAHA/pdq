@@ -3,6 +3,7 @@ import dataclasses
 import glob
 import itertools
 import numpy as np
+import os
 import pathlib
 import re
 from typing import Any, Dict, List, Tuple, Union
@@ -108,6 +109,7 @@ def get_examples_from_clock_sweep(
     directory = directory.rstrip("/")
     basename = f"{directory}/{module_name}"
     output_directories = glob.glob(f"{basename}_*")
+    output_directories = filter(os.path.isdir, output_directories)
     examples = []
     for output_directory in output_directories:
         pattern = f"{basename}_(?P<clk>.*)"
