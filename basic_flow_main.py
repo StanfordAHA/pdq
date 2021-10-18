@@ -16,6 +16,7 @@ from pdq.report_parsing.parsers import parse_ptpx_power
 @dataclasses.dataclass
 class _MainOpts:
     build_dir: str = "build/"
+    syn_only: bool = False
     skip_power: bool = False
 
 
@@ -25,6 +26,9 @@ def _main(ckt, flow_opts: BasicFlowOpts, main_opts: _MainOpts):
 
     syn_step = flow.get_step("synopsys-dc-synthesis")
     syn_step.run()
+
+    if main_opts.syn_only:
+        return
 
     area_report = parse_dc_area(
         syn_step.get_report(f"{ckt.name}.mapped.area.rpt"))
