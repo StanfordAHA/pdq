@@ -84,6 +84,8 @@ class SimpleDirectedGraphViewBase(DirectedGraphInterface):
             node: BitPortNode,
             include_incoming: bool,
             include_outgoing: bool) -> Iterable[BitPortNode]:
+        if node.bit.value.const():
+            return _empty()
         if not (include_incoming or include_outgoing):
             return _empty()
         # TODO(rsetaluri): Check that this node is contained in ckt.

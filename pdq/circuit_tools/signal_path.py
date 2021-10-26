@@ -92,6 +92,8 @@ class Scope(ScopeInterface):
         return not self == other
 
     def __str__(self):
+        if self.top is None:
+            return ""
         top = self.top.name
         if not self.path:
             return top
